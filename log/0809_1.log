@@ -1,0 +1,38 @@
+2021-08-09 18:57:12 [scrapy.utils.log] INFO: Scrapy 1.8.0 started (bot: scrapy_weiboSpider)
+2021-08-09 18:57:12 [scrapy.utils.log] INFO: Versions: lxml 4.4.1.0, libxml2 2.9.9, cssselect 1.1.0, parsel 1.5.2, w3lib 1.21.0, Twisted 19.7.0, Python 3.7.4 (default, Aug  9 2019, 18:34:13) [MSC v.1915 64 bit (AMD64)], pyOpenSSL 19.0.0 (OpenSSL 1.1.1h  22 Sep 2020), cryptography 2.7, Platform Windows-10-10.0.19041-SP0
+2021-08-09 18:57:12 [scrapy.crawler] INFO: Overridden settings: {'BOT_NAME': 'scrapy_weiboSpider', 'CONCURRENT_REQUESTS': 12, 'DOWNLOAD_DELAY': 1, 'DUPEFILTER_CLASS': 'filter_test.Filtre1.RFPDupeFilter', 'LOG_FILE': './log/0809_1.log', 'NEWSPIDER_MODULE': 'scrapy_weiboSpider.spiders', 'RETRY_TIMES': 4, 'SCHEDULER': 'scrapy_redis.scheduler.Scheduler', 'SPIDER_MODULES': ['scrapy_weiboSpider.spiders'], 'USER_AGENT': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.141 Safari/537.36'}
+2021-08-09 18:57:12 [scrapy.extensions.telnet] INFO: Telnet Password: 33ec26e65c219a2a
+2021-08-09 18:57:12 [scrapy.middleware] INFO: Enabled extensions:
+['scrapy.extensions.corestats.CoreStats',
+ 'scrapy.extensions.telnet.TelnetConsole',
+ 'scrapy.extensions.logstats.LogStats']
+2021-08-09 18:57:13 [scrapy.middleware] INFO: Enabled downloader middlewares:
+['scrapy.downloadermiddlewares.httpauth.HttpAuthMiddleware',
+ 'scrapy.downloadermiddlewares.downloadtimeout.DownloadTimeoutMiddleware',
+ 'scrapy.downloadermiddlewares.defaultheaders.DefaultHeadersMiddleware',
+ 'scrapy.downloadermiddlewares.useragent.UserAgentMiddleware',
+ 'scrapy_weiboSpider.middlewares.ScrapyWeibospiderDownloaderMiddleware',
+ 'scrapy.downloadermiddlewares.retry.RetryMiddleware',
+ 'scrapy.downloadermiddlewares.redirect.MetaRefreshMiddleware',
+ 'scrapy.downloadermiddlewares.httpcompression.HttpCompressionMiddleware',
+ 'scrapy.downloadermiddlewares.redirect.RedirectMiddleware',
+ 'scrapy.downloadermiddlewares.cookies.CookiesMiddleware',
+ 'scrapy.downloadermiddlewares.httpproxy.HttpProxyMiddleware',
+ 'scrapy.downloadermiddlewares.stats.DownloaderStats']
+2021-08-09 18:57:13 [scrapy.middleware] INFO: Enabled spider middlewares:
+['scrapy.spidermiddlewares.httperror.HttpErrorMiddleware',
+ 'scrapy.spidermiddlewares.offsite.OffsiteMiddleware',
+ 'scrapy_weiboSpider.middlewares.ScrapyWeibospiderSpiderMiddleware',
+ 'scrapy.spidermiddlewares.referer.RefererMiddleware',
+ 'scrapy.spidermiddlewares.urllength.UrlLengthMiddleware',
+ 'scrapy.spidermiddlewares.depth.DepthMiddleware']
+2021-08-09 18:57:13 [scrapy.middleware] INFO: Enabled item pipelines:
+['scrapy_weiboSpider.pipelines.ScrapyWeibospiderPipeline']
+2021-08-09 18:57:13 [scrapy.core.engine] INFO: Spider opened
+2021-08-09 18:57:13 [scrapy.extensions.logstats] INFO: Crawled 0 pages (at 0 pages/min), scraped 0 items (at 0 items/min)
+2021-08-09 18:57:13 [wb_spider] INFO: Spider opened: wb_spider
+2021-08-09 18:57:13 [wb_spider] INFO: Spider opened: wb_spider
+2021-08-09 18:57:13 [scrapy.extensions.telnet] INFO: Telnet console listening on 127.0.0.1:6023
+2021-08-09 18:57:13 [urllib3.connectionpool] DEBUG: Starting new HTTPS connection (1): weibo.com:443
+2021-08-09 18:57:13 [scrapy.crawler] INFO: Received SIGINT, shutting down gracefully. Send again to force 
+2021-08-09 18:57:14 [scrapy.crawler] INFO: Received SIGINT twice, forcing unclean shutdown
