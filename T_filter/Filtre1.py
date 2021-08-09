@@ -4,7 +4,7 @@ import time
 from scrapy.dupefilters import BaseDupeFilter
 from scrapy_redis.connection import get_redis_from_settings
 from scrapy_redis import defaults
-from filter_test.get_fingerprint import request_fingerprint
+from T_filter.get_fingerprint import request_fingerprint
 
 logger = logging.getLogger(__name__)
 

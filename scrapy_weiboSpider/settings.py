@@ -199,7 +199,7 @@ SCHEDULER_QUEUE_KEY = "{}:requests".format(redis_key)
 
 SCHEDULER = "scrapy_redis.scheduler.Scheduler"
 # DUPEFILTER_CLASS = "scrapy_redis_bloomfilter.dupefilter.BaseDupeFilter"
-DUPEFILTER_CLASS = "filter_test.Filtre1.RFPDupeFilter"
+DUPEFILTER_CLASS = "T_filter.Filtre1.RFPDupeFilter"
 
 # 将Requests队列持久化到Redis，可支持暂停或重启爬虫
 SCHEDULER_PERSIST = True

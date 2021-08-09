@@ -15,38 +15,6 @@ from scrapy_weiboSpider.items import weiboItem, commentItem
 from scrapy_weiboSpider.settings import get_key_word
 
 
-def t_is_a_early_than_b(a, b, can_equal):
-    """
-    时间比较
-    :param a: 毫秒时间戳(13位)或 "%Y-%m-%d"格式的字符串
-    :param b: 毫秒时间戳(13位)或 "%Y-%m-%d"格式的字符串
-    :param can_equal: 时间相等时返回True还是False
-    :return: int
-    """
-    patten = "%Y-%m-%d"
-    if type(a) == str:
-        time_a = time.strptime(a, patten)
-        timestamp_a = time.mktime(time_a) * 1000
-    elif type(a) == int:
-        timestamp_a = a
-    else:
-        print("参数a应为int或str类型，返回0")
-        return 0
-
-    if type(b) == str:
-        time_b = time.strptime(b, patten)
-        timestamp_b = time.mktime(time_b) * 1000
-    elif type(b) == int:
-        timestamp_b = b
-    else:
-        timestamp_b = 0
-        print("参数a应为int或str类型,返回0")
-        return 0
-    result = timestamp_b - timestamp_a
-    if can_equal:
-        return result >= 0
-    else:
-        return result > 0
 
 
 def quick_log(str1, file_name="test_code.log"):
@@ -999,7 +967,7 @@ class WeiboSpiderSpider(scrapy.Spider):
 
             wb_stop_time = int(newest_div.xpath(".//div[contains(@class,'WB_from')]/a/@date")[0])
             # 最晚的微博早于start_time,直接跳出循环
-            if t_is_a_early_than_b(wb_stop_time, start_time, False):
+            if self.t_is_a_early_than_b(wb_stop_time, start_time, False):
                 result = False
                 remark = "wb stoptime {}, target start time {},divs too early. 该组div被过滤掉" \
                     .format(wb_stop_time, start_time)
@@ -1009,7 +977,7 @@ class WeiboSpiderSpider(scrapy.Spider):
             earliest_div = divs[-1]
 
             wb_start_time = int(earliest_div.xpath(".//div[contains(@class,'WB_from')]/a/@date")[0])
-            if t_is_a_early_than_b(stop_time, wb_start_time, True):
+            if self.t_is_a_early_than_b(stop_time, wb_start_time, True):
                 result = False
                 remark = "target stop time {},wb start time {},to later. 该组div被过滤掉" \
                     .format(stop_time, wb_start_time)
@@ -1032,11 +1000,44 @@ class WeiboSpiderSpider(scrapy.Spider):
         """
         start_time = self.config["personal_homepage_config"]["time_range"]["start_time"]
         stop_time = self.config["personal_homepage_config"]["time_range"]["stop_time"]
-        if start_time and not t_is_a_early_than_b(start_time, time1, True):
+        if start_time and not self.t_is_a_early_than_b(start_time, time1, True):
             return False
-        if stop_time and not t_is_a_early_than_b(time1, stop_time, False):
+        if stop_time and not self.t_is_a_early_than_b(time1, stop_time, False):
             return False
         return True
+
+    def t_is_a_early_than_b(self,a, b, can_equal):
+        """
+        时间比较
+        :param a: 毫秒时间戳(13位)或 "%Y-%m-%d"格式的字符串
+        :param b: 毫秒时间戳(13位)或 "%Y-%m-%d"格式的字符串
+        :param can_equal: 时间相等时返回True还是False
+        :return: int
+        """
+        patten = "%Y-%m-%d"
+        if type(a) == str:
+            time_a = time.strptime(a, patten)
+            timestamp_a = time.mktime(time_a) * 1000
+        elif type(a) == int:
+            timestamp_a = a
+        else:
+            print("参数a应为int或str类型，返回0")
+            return 0
+
+        if type(b) == str:
+            time_b = time.strptime(b, patten)
+            timestamp_b = time.mktime(time_b) * 1000
+        elif type(b) == int:
+            timestamp_b = b
+        else:
+            timestamp_b = 0
+            print("参数a应为int或str类型,返回0")
+            return 0
+        result = timestamp_b - timestamp_a
+        if can_equal:
+            return result >= 0
+        else:
+            return result > 0
 
     def rquests_get_weibo_div(self, session, url):
         # 对单条微博的链接发起请求，解析出div[@tbinfo]

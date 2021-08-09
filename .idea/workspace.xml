@@ -1,7 +1,24 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="eb9cf637-533c-4a9a-aaf5-eae3659b01ac" name="Default Changelist" comment="" />
+    <list default="true" id="eb9cf637-533c-4a9a-aaf5-eae3659b01ac" name="Default Changelist" comment="">
+      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/filter_test/Filtre1.py" beforeDir="false" afterPath="$PROJECT_DIR$/T_filter/Filtre1.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/filter_test/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/T_filter/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/filter_test/get_fingerprint.py" beforeDir="false" afterPath="$PROJECT_DIR$/T_filter/get_fingerprint.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/log/0808_1.log" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/log/0809_1.log" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/log/0809_2.log" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/log/0809_3.log" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/log/0809_4.log" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/log/0809_5.log" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/scrapy_weiboSpider/settings.py" beforeDir="false" afterPath="$PROJECT_DIR$/scrapy_weiboSpider/settings.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/scrapy_weiboSpider/spiders/weibo_spider.py" beforeDir="false" afterPath="$PROJECT_DIR$/scrapy_weiboSpider/spiders/weibo_spider.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test_code.log" beforeDir="false" />
+    </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -29,8 +46,13 @@
       </list>
     </option>
   </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
   <component name="ProjectId" id="1vNxjItEKmLpGCSPQst1dX539nz" />
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
   <component name="PropertiesComponent">
+    <property name="SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
     <property name="WebServerToolWindowFactoryState" value="false" />
     <property name="last_opened_file_path" value="$PROJECT_DIR$/../Ish_spider" />
     <property name="node.js.detected.package.eslint" value="true" />
@@ -231,12 +253,23 @@
       <workItem from="1628053140288" duration="22102000" />
       <workItem from="1628145099794" duration="19683000" />
       <workItem from="1628407340848" duration="6174000" />
-      <workItem from="1628504845906" duration="8692000" />
+      <workItem from="1628504845906" duration="11038000" />
     </task>
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="1" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/scrapy_weiboSpider$test__1_.coverage" NAME="test (1) Coverage Results" MODIFIED="1627480438879" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
