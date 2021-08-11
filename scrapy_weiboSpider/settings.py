@@ -53,10 +53,11 @@ def t_is_a_early_than_b(a, b, can_equal):
     elif type(b) == int:
         timestamp_b = b
     else:
-        timestamp_b = 0
         print("参数a应为int或str类型,返回0")
         return 0
+
     result = timestamp_b - timestamp_a
+
     if can_equal:
         return result >= 0
     else:
@@ -78,7 +79,8 @@ def check_config():
     配置文件检查
     :return:
     """
-    config_str = open("./file/config.json", "r", encoding="utf-8").read()
+    print("检查配置文件")
+    config_str = open("./file/config.json", "r", encoding="gbk").read()
     config = json.loads(config_str, encoding="utf-8")
     # 个人主页模式
     if config["mode"] == 1:
@@ -96,14 +98,14 @@ def check_config():
             return False
 
         # 功能启动检查
-        function_keys = ["auto_get_increment", "time_range", "update_comment_config"]
-        enabled_function = []
-        for function_key in function_keys:
-            if t_config[function_key]["enable"]:
-                enabled_function.append(function_key)
-        if len(enabled_function) > 1:
-            print("功能 {} 不能同时启用".format("，".join(enabled_function)))
-            return False
+        # function_keys = ["time_range", "update_comment_config"]
+        # enabled_function = []
+        # for function_key in function_keys:
+        #     if t_config[function_key]["enable"]:
+        #         enabled_function.append(function_key)
+        # if len(enabled_function) > 1:
+        #     print("功能 {} 不能同时启用".format("，".join(enabled_function)))
+        #     return False
 
         # 时间范围功能参数检查
         if t_config["time_range"]["enable"]:
@@ -111,7 +113,7 @@ def check_config():
             stop_time = t_config["time_range"]["stop_time"]
             for time1 in [start_time, stop_time]:
 
-                if not isinstance(time1, int) or not isinstance(time1, str):
+                if not (isinstance(time1, int) or isinstance(time1, str)):
                     print("start_time/stop_time应为int或str")
                     return False
 
@@ -122,8 +124,7 @@ def check_config():
                     except:
                         print("start_time/stop_time为str时，应该为%Y-%m-%d %H:%M格式")
                         return False
-
-            if (start_time and stop_time) and not t_is_a_early_than_b(start_time, start_time, False):
+            if (start_time and stop_time) and not t_is_a_early_than_b(start_time, stop_time, False):
                 print("时间范围设定错误（开始时间晚于结束时间）")
                 return False
     # 搜索模式参数检查
@@ -133,14 +134,22 @@ def check_config():
         if not t_config["search_code"]:
             print("搜索关键词不能为空")
             return False
+
+        print("这个模式的功能还没开始写")
+        return False
+
     # 评论实时更新模式参数检查
     elif config["mode"] == 3:
-        print("评论更新模式")
+        print("评论监控模式")
         t_config = config["single_weibo_with_comment_real-time_updates_config"]
         if not t_config["weibo_url"]:
             print("微博链接不能为空")
             return False
         print("评论实时爬取模式")
+        print("这个模式的功能还没开始写")
+        return False
+
+
     # 模式编号错误
     else:
         mode_id = config["mode"]
@@ -150,20 +159,35 @@ def check_config():
     return True
 
 
-def get_key_word():
+def get_key_word(user_Chinese_symbols=True):
     """
     通过配置文件生成存到redis中key的名字
     :return:
     """
-    config_str = open("./file/config.json", "r", encoding="utf-8").read()
+    config_str = open("./file/config.json", "r", encoding="gbk").read()
     config = json.loads(config_str, encoding="utf-8")
     key_word = ""
     if config["mode"] == 1:
-        key_word = "wb_1_"
+        key_word = ""
         t_config = config["personal_homepage_config"]
-        key_word += t_config["user_id"]
+        if t_config["user_name"]:
+            key_word += "[" + t_config["user_name"] + "]"
+            key_word += t_config["user_id"]
+        else:
+            key_word += t_config["user_id"]
+
         if t_config["time_range"]["enable"]:
-            key_word += "[{}-{}]".format(t_config["time_range"]["start_time"], t_config["time_range"]["stop_time"])
+            start_time = t_config["time_range"]["start_time"]
+            stop_time = t_config["time_range"]["stop_time"]
+            if user_Chinese_symbols and isinstance(start_time, str):
+                start_time = start_time.replace(":", "：")
+            if user_Chinese_symbols and isinstance(stop_time, str):
+                stop_time = stop_time.replace(":", "：")
+            if not stop_time:
+                stop_time = "x"
+            if not start_time:
+                start_time = "x"
+            key_word += "[{} - {}]".format(start_time, stop_time)
 
 
     elif config["mode"] == 2:
@@ -180,10 +204,13 @@ def get_key_word():
     return key_word
 
 
-if not check_config:
+if not check_config():
     print("配置文件错误，按任意键退出")
     ord(msvcrt.getch())
     exit()
+else:
+    print("检查完成")
+FEED_EXPORT_ENCODING = "gbk"
 
 # 指定Redis的主机名和端口
 REDIS_HOST = '127.0.0.1'
@@ -193,7 +220,7 @@ REDIS_PORT = 6379
 # SCHEDULER_DUPEFILTER_KEY = redis_key
 
 # redis key
-redis_key = get_key_word()
+redis_key = get_key_word(False)
 SCHEDULER_DUPEFILTER_KEY = '{}:dupefilter'.format(redis_key)
 SCHEDULER_QUEUE_KEY = "{}:requests".format(redis_key)
 

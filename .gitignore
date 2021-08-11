@@ -1,4 +1,5 @@
 /log/*
 /test_code
 /test_file/*
-/file/wb*
+/file/*
+test.py

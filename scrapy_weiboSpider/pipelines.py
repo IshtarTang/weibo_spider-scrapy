@@ -8,16 +8,17 @@ from scrapy_weiboSpider.items import *
 from scrapy_weiboSpider.settings import get_key_word
 import json
 import os
+import sys
 
 
 class ScrapyWeibospiderPipeline(object):
 
     def open_spider(self, spider):
+        print("文件准备")
         self.base_path = "./file"
-        self.config = self.read_json(self.base_path + "/config.json")
+        self.config = self.read_json(self.base_path + "/config.json",coding="gbk")
         self.filedir = self.get_get_filepath()
         self.pre_file_path = self.filedir + "/" + "prefile"
-
         # 过程文件路径
         self.weibo_filepath = self.pre_file_path + "/weibo.txt"
         self.rcomm_filepath = self.pre_file_path + "/rcomm.txt"
@@ -34,6 +35,8 @@ class ScrapyWeibospiderPipeline(object):
         self.weibo_file = open(self.weibo_filepath, "w", encoding="utf-8")
         self.rcomm_file = open(self.rcomm_filepath, "w", encoding="utf-8")
         self.ccomm_file = open(self.ccomm_filepath, "w", encoding="utf-8")
+
+        print("文件初始化完成")
 
     def process_item(self, item, spider):
         """
@@ -58,7 +61,6 @@ class ScrapyWeibospiderPipeline(object):
                 "forward_num": item["forward_num"],
                 "comment_num": item["comment_num"],
                 "is_original": item["is_original"],
-                "r_href": item["r_href"],
                 "links": item["links"],
                 "img_list": item["img_list"],
                 "video_url": item["video_url"],
@@ -66,6 +68,7 @@ class ScrapyWeibospiderPipeline(object):
                 "article_url": item["article_url"],
                 "article_content": item["article_content"],
                 "remark": item["remark"],
+                "r_href": item["r_href"],
                 "r_weibo": item["r_weibo"],
 
             }
@@ -186,6 +189,7 @@ class ScrapyWeibospiderPipeline(object):
     def get_get_filepath(self):
         key_word = get_key_word()
         path = self.base_path + "/" + key_word
+        print("文件路径 {}".format(path))
         return path
 
     def init_file(self):

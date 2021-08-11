@@ -10,15 +10,18 @@ from scrapy import Request
 from scrapy.spidermiddlewares.httperror import HttpError
 from twisted.internet.error import DNSLookupError, TimeoutError, TCPTimedOutError
 import requests
+import msvcrt
 import logging
 from scrapy_weiboSpider.items import weiboItem, commentItem
 from scrapy_weiboSpider.settings import get_key_word
 
 
-
-
-def quick_log(str1, file_name="test_code.log"):
-    with open(file_name, "a", encoding="utf-8") as op:
+def spe_log(str1, file_name="test_code.log"):
+    path = "test_file"
+    if not os.path.exists(path):
+        os.makedirs(path)
+    file_path = path + "/" + file_name
+    with open(file_path, "a", encoding="utf-8") as op:
         op.write(str(str1))
         op.write("\n")
 
@@ -55,11 +58,19 @@ class WeiboSpiderSpider(scrapy.Spider):
     name = 'wb_spider'
     allowed_domains = ['weibo.com']
     start_urls = ['http://weibo.com/']
-    config = read_json("./file/config.json")
+    config = read_json("./file/config.json", coding="gbk")
     user_ident = ""
     test_list = []
 
     key_word = get_key_word()
+    print("本次运行的文件key为 {}".format(key_word))
+    if os.path.exists("./file" + "/" + key_word + "/wb_result.json"):
+        print("目标路径下已有上次运行产生的文件，本次运行爬取的微博会更新到文件中")
+    print("按任意键继续，或Esc以退出")
+    x = ord(msvcrt.getch())
+    if x == 27:
+        print("程序退出")
+        quit()
     pre_save_file_path = "./file" + "/" + key_word + "/prefile/simple_wb_info.json"
     fail_url_filepath = "./file" + "/" + key_word + "fail_url.txt"
 
@@ -91,6 +102,7 @@ class WeiboSpiderSpider(scrapy.Spider):
         return response
 
     def start_requests(self):
+
         # 链接测试
         ident = self.get_user_ident()
         print(ident)
@@ -115,11 +127,11 @@ class WeiboSpiderSpider(scrapy.Spider):
                 page_in_timerange = self.t_is_page_in_timerange(user_id, page)
                 # 晚了，跳过该页
                 if page_in_timerange == "later":
-                    print("page{}早于目标时间，跳过".format(page))
+                    print("page{}晚于目标时间，跳过".format(page))
                     continue
                 # 早了，结束循环
                 elif page_in_timerange == "early":
-                    print("page{}晚于目标时间，页数获取结束".format(page))
+                    print("page{}早于目标时间，页数获取结束".format(page))
                     break
 
             # url2和url3带时间戳，重复启动的时候链接会变。但1不带时间戳，需要加上dont_filter=True，否则重复启动时会被过滤掉
@@ -217,7 +229,7 @@ class WeiboSpiderSpider(scrapy.Spider):
         # quick_log("----------")
         if not root_comm_divs:
             if meta["count"] > 5:
-                quick_log(response.url)
+                spe_log("{}  {}".format(meta["superior_id"], response.url))
                 return
             meta["count"] += 1
             yield Request(response.url, callback=self.get_root_comment, cookies=self.cookies, meta=meta,
@@ -286,7 +298,7 @@ class WeiboSpiderSpider(scrapy.Spider):
         if not child_comment_divs:
             meta = response.meta
             if meta["count"] > 5:
-                quick_log(response.url)
+                spe_log("{}  {}".format(root_comm_id, response.url))
                 return
             meta["count"] += 1
             yield Request(response.url, self.get_child_comment, cookies=self.cookies, meta=meta, errback=self.deal_err)
@@ -376,12 +388,12 @@ class WeiboSpiderSpider(scrapy.Spider):
             weibo_url = "https://weibo.com" + parse.xpath(".//div[contains(@class,'WB_from')]/a/@href")[0]
         except:
             print("调用parse_weibo_from_div的参数有误，返回空weibo对象")
-            quick_log("r wb解析失败 t_bid{}".format(t_bid))
+            logging.warning("r wb解析失败 t_bid{}".format(t_bid))
             time.sleep(3)
             return
 
         if self.config["print_level"]:
-            print("开始解析链接 {}".format(weibo_url))
+            print("开始解析微博 {}".format(weibo_url))
         logging.info("开始解析 {}".format(weibo_url))
 
         # bid
@@ -391,7 +403,8 @@ class WeiboSpiderSpider(scrapy.Spider):
 
         ident = bid.split("/")[0]
         if ident in self.saved_key:
-            logging.info("当前微博 {} 在之前已保存，跳过".format(bid))
+            if self.config["print_level"]:
+                logging.info("当前微博 {} 在之前已保存，跳过".format(bid))
             return
 
         # 发表时间戳
@@ -603,7 +616,8 @@ class WeiboSpiderSpider(scrapy.Spider):
         r_weibo = {}  # 先占个位，Pipeline里再写进去
         if r_href and "源微博已不可见" not in remark:
             r_url = "https://weibo.com" + r_href
-            print("微博为转发微博，开始解析源微博 {}".format(r_url))
+            if self.config["print_level"]:
+                print("微博为转发微博，开始解析源微博 {}".format(r_url))
             meta = {}
             meta["t_weibo_div"] = etree.tostring(div).decode("utf-8")
             meta["t_bid"] = bid
@@ -744,7 +758,6 @@ class WeiboSpiderSpider(scrapy.Spider):
             print("你传了个什么屌东西")
             print("位置 get_div_from_part1")
             return []
-        write_json(scripts)
         re_s = ""
         divs = []
         for script in scripts[-1::-1]:
@@ -1006,15 +1019,15 @@ class WeiboSpiderSpider(scrapy.Spider):
             return False
         return True
 
-    def t_is_a_early_than_b(self,a, b, can_equal):
+    def t_is_a_early_than_b(self, a, b, can_equal):
         """
         时间比较
-        :param a: 毫秒时间戳(13位)或 "%Y-%m-%d"格式的字符串
-        :param b: 毫秒时间戳(13位)或 "%Y-%m-%d"格式的字符串
+        :param a: 毫秒时间戳(13位)或 "%Y-%m-%d %H:%M"格式的字符串
+        :param b: 毫秒时间戳(13位)或 "%Y-%m-%d %H:%M"格式的字符串
         :param can_equal: 时间相等时返回True还是False
         :return: int
         """
-        patten = "%Y-%m-%d"
+        patten = "%Y-%m-%d %H:%M"
         if type(a) == str:
             time_a = time.strptime(a, patten)
             timestamp_a = time.mktime(time_a) * 1000
