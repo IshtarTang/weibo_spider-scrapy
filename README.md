@@ -88,7 +88,7 @@
 
 项目路径下开命令提示符，输` pip install -r requirements.txt `
 
-程序用到了redis来保证下载中断后可保持进度，得装redis，到这下 https://github.com/tporadowski/redis/releases，我用的版本是3.0.504。或者直接百度云，https://pan.baidu.com/s/1_Zf-fOKZ52ZGgHxMCh0HbA 提取码：2q4z。
+程序用到了redis来保证下载中断后可保持进度，得装redis，到这下 https://github.com/tporadowski/redis/releases ，我用的版本是3.0.504。或者直接百度云，https://pan.baidu.com/s/1_Zf-fOKZ52ZGgHxMCh0HbA 提取码：2q4z。
 
 下zip文件解压后戳`redis-server.exe`，弹出右边的窗口就是启动成功了。每次程序启动前都需要先启动redis。
 
@@ -257,15 +257,3 @@ comments下各字段含义
 | link            | 评论中带的链接                                            | str  |
 | chile_comm      | 子评论，即该条评论下的回复，子评论键值内容与父评论相同    |      |
 
-|      |      |      |
-| ---- | ---- | ---- |
-|      |      |      |
-|      |      |      |
-|      |      |      |
-|      |      |      |
-|      |      |      |
-|      |      |      |
-|      |      |      |
-|      |      |      |
-|      |      |      |
-|      |      |      |
