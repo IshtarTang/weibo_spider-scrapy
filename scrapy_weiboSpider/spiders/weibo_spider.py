@@ -119,7 +119,8 @@ class WeiboSpiderSpider(scrapy.Spider):
             url1 = first_part_url_base.format(user_id, page)
             url2 = sub_part_url_base.format(page, 0, user_id, user_id, page, int(time.time() * 1000))
             url3 = sub_part_url_base.format(page, 1, user_id, user_id, page, int(time.time() * 1000))
-
+            if self.config["print_level"]:
+                print("page {} 时间检查".format(page))
             # 有进行时间限定
             if self.config["personal_homepage_config"]["time_range"]["enable"]:
                 # 检查这一页是否需要进行请求
@@ -133,17 +134,20 @@ class WeiboSpiderSpider(scrapy.Spider):
                 elif page_in_timerange == "early":
                     print("page{}早于目标时间，页数获取结束".format(page))
                     break
+            if self.config["print_level"]:
+                print("page {} 时间检查通过".format(page))
 
-            # url2和url3带时间戳，重复启动的时候链接会变。但1不带时间戳，需要加上dont_filter=True，否则重复启动时会被过滤掉
             yield Request(url1, self.parse_home_page, cookies=self.cookies, meta={"count": 1, "part": 1, "max_div": 0},
                           errback=self.deal_err, dont_filter=True)
             yield Request(url2, self.parse_home_page, cookies=self.cookies, meta={"count": 1, "part": 2, "max_div": 0},
-                          errback=self.deal_err)
+                          errback=self.deal_err, dont_filter=True)
             yield Request(url3, self.parse_home_page, cookies=self.cookies, meta={"count": 1, "part": 3, "max_div": 0},
-                          errback=self.deal_err)
+                          errback=self.deal_err, dont_filter=True)
 
     def parse_home_page(self, response):
         meta = response.meta
+        logging.info(meta)
+
         if response.meta["part"] == 1:
             divs = self.parse_div_from_part1_response(response)
             # 没找到divs就重新请求

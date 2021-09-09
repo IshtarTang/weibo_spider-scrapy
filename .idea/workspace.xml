@@ -2,28 +2,10 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="eb9cf637-533c-4a9a-aaf5-eae3659b01ac" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/笔记图/README/1628610802826.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/笔记图/README/1628613064721.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/笔记图/README/1628616482050.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/笔记图/README/1628654504062.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/笔记图/README/1628655283246.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/笔记图/README/1628655367069.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/笔记图/README/cookies获取.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/笔记图/README/id获取.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/笔记图/README/保存文件字段-1628644419723.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/笔记图/README/保存文件示例.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/笔记图/README/微博示例.jpg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/笔记图/README/文件示例.jpg" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/日志" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/file/config.json" beforeDir="false" afterPath="$PROJECT_DIR$/file/config.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/file/wb_1_6227479352/prefile/simple_wb_info.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/file/wb_1_6227479352/r_wb_result.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/file/wb_1_6227479352/wb_result.json" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/scrapy_weiboSpider/pipelines.py" beforeDir="false" afterPath="$PROJECT_DIR$/scrapy_weiboSpider/pipelines.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/scrapy_weiboSpider/settings.py" beforeDir="false" afterPath="$PROJECT_DIR$/scrapy_weiboSpider/settings.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/scrapy_weiboSpider/spiders/weibo_spider.py" beforeDir="false" afterPath="$PROJECT_DIR$/scrapy_weiboSpider/spiders/weibo_spider.py" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -61,7 +43,7 @@
   <component name="PropertiesComponent">
     <property name="SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
     <property name="WebServerToolWindowFactoryState" value="false" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/../Ish_spider" />
     <property name="node.js.detected.package.eslint" value="true" />
     <property name="node.js.detected.package.tslint" value="true" />
     <property name="node.js.path.for.package.eslint" value="project" />
@@ -262,7 +244,14 @@
       <workItem from="1628407340848" duration="6174000" />
       <workItem from="1628504845906" duration="11616000" />
       <workItem from="1628583369041" duration="13370000" />
-      <workItem from="1628643425297" duration="12637000" />
+      <workItem from="1628643425297" duration="14986000" />
+      <workItem from="1628757067751" duration="9000" />
+      <workItem from="1628757088626" duration="260000" />
+      <workItem from="1628908744456" duration="2395000" />
+      <workItem from="1629022115092" duration="596000" />
+      <workItem from="1629111758037" duration="595000" />
+      <workItem from="1629367129972" duration="6000" />
+      <workItem from="1631159223857" duration="3644000" />
     </task>
     <servers />
   </component>

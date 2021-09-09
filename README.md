@@ -42,7 +42,7 @@
 
 `user_id`：[userid 获取](./笔记图/README/id获取.png)
 
-`user_name`：你要爬取的用户的用户名。不写也行，因为这个项影响的是文件保存位置，具体看结果文件那里的说明。
+`user_name`：你要爬取的用户的用户名。不写也行，因为这个项影响的是文件保存位置，具体看结果文件那里的说明。[这里发现一点bug，不能写中文，写的话会影响程序运行]
 
 `get_all_comment`：是否保存该用户微博下的所有评论。1为保存全部，0为只保存前15条（一次请求的量）
 
@@ -50,13 +50,15 @@
 
 `time_range`：如果你只想爬取一个用户某段时间内发的微博，就把这下面的`enable`设为1，start_time和stop_time就是字面意思，开始时间和结束时间，爬到的内容包括start_time发出的微博的，不包括stop_time发出的微博，即[start_time,stop_time）
 
-​		`enable`：是否启用该功能，1启动，0关闭
+ 		`enable`：是否启用该功能，1启动，0关闭
 
-​		`start_time`：格式为 `%Y-%m-%d %H:%M`的字符串，或毫秒级时间戳。可以为0，为0则不限制开始时间
+ 		`start_time`：格式为 `%Y-%m-%d %H:%M`的字符串，或毫秒级时间戳。可以为0，为0则不限制开始时间
 
-​		`stop_time`：格式为 `%Y-%m-%d %H:%M`的字符串，或毫秒级时间戳。可以为0，为0则不限制结束时间
+ 		`stop_time`：格式为 `%Y-%m-%d %H:%M`的字符串，或毫秒级时间戳。可以为0，为0则不限制结束时间
 
-​		例：如果想只爬取2020-01-01到2021-01-01的微博
+例：如果想只爬取2020-01-01到2021-01-01的微博
+
+
 
 ![1628610802826](%E7%AC%94%E8%AE%B0%E5%9B%BE/README/1628610802826.png)
 
@@ -86,7 +88,7 @@
 
 项目路径下开命令提示符，输` pip install -r requirements.txt `
 
-程序用到了redis来保证下载中断后可保持进度，得装redis，到这下 https://github.com/tporadowski/redis/releases，我用的版本是3.0.504。或者直接百度云，https://pan.baidu.com/s/1_Zf-fOKZ52ZGgHxMCh0HbA 提取码：2q4z。
+程序用到了redis来保证下载中断后可保持进度，得装redis，到这下 https://github.com/tporadowski/redis/releases ，我用的版本是3.0.504。或者直接百度云，https://pan.baidu.com/s/1_Zf-fOKZ52ZGgHxMCh0HbA 提取码：2q4z。
 
 下zip文件解压后戳`redis-server.exe`，弹出右边的窗口就是启动成功了。每次程序启动前都需要先启动redis。
 
@@ -254,17 +256,3 @@ comments下各字段含义
 | comment_img_url | 评论中带的图片链接                                        | str  |
 | link            | 评论中带的链接                                            | str  |
 | chile_comm      | 子评论，即该条评论下的回复，子评论键值内容与父评论相同    |      |
-
-
-
-
-
-
-
-
-
-
-
-
-
-
