@@ -1,15 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="eb9cf637-533c-4a9a-aaf5-eae3659b01ac" name="Default Changelist" comment="发现点bug但是不大">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/T_filter/Filtre1.py" beforeDir="false" afterPath="$PROJECT_DIR$/T_filter/Filtre1.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/file/config.json" beforeDir="false" afterPath="$PROJECT_DIR$/file/config.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/scrapy_weiboSpider/pipelines.py" beforeDir="false" afterPath="$PROJECT_DIR$/scrapy_weiboSpider/pipelines.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/scrapy_weiboSpider/settings.py" beforeDir="false" afterPath="$PROJECT_DIR$/scrapy_weiboSpider/settings.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/scrapy_weiboSpider/spiders/weibo_spider.py" beforeDir="false" afterPath="$PROJECT_DIR$/scrapy_weiboSpider/spiders/weibo_spider.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/日志" beforeDir="false" afterPath="$PROJECT_DIR$/日志" afterDir="false" />
-    </list>
+    <list default="true" id="eb9cf637-533c-4a9a-aaf5-eae3659b01ac" name="Default Changelist" comment="" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -258,7 +250,7 @@
       <workItem from="1631159223857" duration="8124000" />
       <workItem from="1631197746020" duration="542000" />
       <workItem from="1634096994142" duration="960000" />
-      <workItem from="1634459056353" duration="18605000" />
+      <workItem from="1634459056353" duration="18858000" />
     </task>
     <task id="LOCAL-00001" summary="发现点bug但是不大">
       <created>1631173131950</created>
@@ -281,7 +273,21 @@
       <option name="project" value="LOCAL" />
       <updated>1631178107240</updated>
     </task>
-    <option name="localTasksCounter" value="4" />
+    <task id="LOCAL-00004" summary="发现点bug但是不大">
+      <created>1634565994624</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1634565994624</updated>
+    </task>
+    <task id="LOCAL-00005" summary="发现点bug但是不大">
+      <created>1634566059832</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1634566059832</updated>
+    </task>
+    <option name="localTasksCounter" value="6" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
