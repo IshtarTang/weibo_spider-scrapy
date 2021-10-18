@@ -16,7 +16,7 @@ class ScrapyWeibospiderPipeline(object):
     def open_spider(self, spider):
         print("文件准备")
         self.base_path = "./file"
-        self.config = self.read_json(self.base_path + "/config.json",coding="gbk")
+        self.config = self.read_json(self.base_path + "/config.json", coding="gbk")
         self.filedir = self.get_get_filepath()
         self.pre_file_path = self.filedir + "/" + "prefile"
         # 过程文件路径
@@ -32,9 +32,10 @@ class ScrapyWeibospiderPipeline(object):
         self.init_file()
 
         # 过程文件
-        self.weibo_file = open(self.weibo_filepath, "w", encoding="utf-8")
-        self.rcomm_file = open(self.rcomm_filepath, "w", encoding="utf-8")
-        self.ccomm_file = open(self.ccomm_filepath, "w", encoding="utf-8")
+
+        self.weibo_file = open(self.weibo_filepath, "a", encoding="utf-8")
+        self.rcomm_file = open(self.rcomm_filepath, "a", encoding="utf-8")
+        self.ccomm_file = open(self.ccomm_filepath, "a", encoding="utf-8")
 
         print("文件初始化完成")
 
@@ -179,9 +180,12 @@ class ScrapyWeibospiderPipeline(object):
         self.write_json(simple_wb_dict, self.simple_wb_info_fileapht)
 
         # 清空临时文件
-        for t_filepaht in [self.weibo_filepath, self.rcomm_filepath, self.ccomm_filepath]:
-            if os.path.exists(t_filepaht):
-                os.remove(t_filepaht)
+        input1 = input("\n文件保存完毕，是否清空临时文件（yes/no）")
+        if input1 == "yes":
+            for t_filepaht in [self.weibo_filepath, self.rcomm_filepath, self.ccomm_filepath]:
+                if os.path.exists(t_filepaht):
+                    os.remove(t_filepaht)
+        print("保存结束，文件保存于{}".format(self.filedir))
         # open(self.weibo_filepath, "w", encoding="utf-8").write("")
         # open(self.rcomm_filepath, "w", encoding="utf-8").write("")
         # open(self.ccomm_filepath, "w", encoding="utf-8").write("")
@@ -199,7 +203,6 @@ class ScrapyWeibospiderPipeline(object):
             os.makedirs(self.pre_file_path)
         if not os.path.exists(self.simple_wb_info_fileapht):
             self.write_json({}, self.simple_wb_info_fileapht)
-
         if not os.path.exists(self.wb_result_filepaht):
             self.write_json([], self.wb_result_filepaht)
 

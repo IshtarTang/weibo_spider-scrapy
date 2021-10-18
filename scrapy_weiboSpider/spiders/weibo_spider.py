@@ -89,7 +89,6 @@ class WeiboSpiderSpider(scrapy.Spider):
         saved_key = []
 
     # 一个requests的session，在解析部分有需要立刻返回结果的请求
-
     def session_get(self, url):
         # 如果session创建时间超过10分钟，重置session
         if time.time() - self.session_start_time > 600:
@@ -102,8 +101,7 @@ class WeiboSpiderSpider(scrapy.Spider):
         return response
 
     def start_requests(self):
-
-        # 链接测试
+        # 网络测试
         ident = self.get_user_ident()
         print(ident)
         # 获取页数
@@ -116,6 +114,7 @@ class WeiboSpiderSpider(scrapy.Spider):
         # 页数循环
         user_id = self.config["personal_homepage_config"]["user_id"]
         for page in range(1, page_num + 1):
+        # for page in range(1, 2):
             url1 = first_part_url_base.format(user_id, page)
             url2 = sub_part_url_base.format(page, 0, user_id, user_id, page, int(time.time() * 1000))
             url3 = sub_part_url_base.format(page, 1, user_id, user_id, page, int(time.time() * 1000))
@@ -147,34 +146,28 @@ class WeiboSpiderSpider(scrapy.Spider):
     def parse_home_page(self, response):
         meta = response.meta
         logging.info(meta)
+        # part1 的div需要从一大堆script里面找，有些长所以单独写了个方法， part2和part3可以直接parse
 
         if response.meta["part"] == 1:
             divs = self.parse_div_from_part1_response(response)
-            # 没找到divs就重新请求
-            if not divs:
-                meta["count"] += 1
-                if meta["count"] > 6:
-                    logging.warning("主页链接{}请求失败次数过多，请确认该页是否有效".format(response.url))
-                    print("主页链接{}请求失败次数过多，请确认该页是否有效".format(response.url))
-
-                    return
-
-                yield Request(response.url, self.parse_home_page, cookies=self.cookies, meta=meta, dont_filter=True,
-                              errback=self.deal_err)
-                return
-
         else:
             html_text = json.loads(response.text)["data"]
             parse = etree.HTML(html_text)
-            if not parse:
-                meta["count"] += 1
-                if meta["count"] > 6:
-                    logging.warning("主页链接{}请求失败次数过多，请确认该页是否有效".format(response.url))
-                    print("主页链接{}请求失败次数过多，请确认该页是否有效".format(response.url))
-                    return
-                yield Request(response.url, self.parse_home_page, cookies=self.cookies, meta=meta, dont_filter=True,
-                              errback=self.deal_err)
-            divs = parse.xpath("//div[@tbinfo]")
+            try:
+                divs = parse.xpath("//div[@tbinfo]")
+            except:
+                divs = []
+        # 没找到divs就重新请求
+        if not divs:
+            meta["count"] += 1
+            if meta["count"] > 6:
+                logging.warning("主页链接{}请求失败次数过多，请确认该页是否有效".format(response.url))
+                print("主页链接{}请求失败次数过多，请确认该页是否有效".format(response.url))
+
+                return
+            yield Request(response.url, self.parse_home_page, cookies=self.cookies, meta=meta, dont_filter=True,
+                          errback=self.deal_err)
+            return
 
         # 每条微博是一个div
         # 过滤掉点赞
@@ -190,7 +183,7 @@ class WeiboSpiderSpider(scrapy.Spider):
             real_div_list.append(div)
         #  没有15条说明没获取完，重新获取
         if len(real_div_list) < 15:
-            # 循环次数大于4次,说明只有这么多条，则不重新获取，继续解析。max_div用于确认当前div数量是能获取到的最大div。
+            # 循环次数大于4次,说明只有这么多条，不再重复获取，继续解析。max_div用于确认当前div数量是能获取到的最大div。
             if meta["count"] > 4 and len(real_div_list) == meta["max_div"]:
                 pass
             else:
@@ -379,7 +372,7 @@ class WeiboSpiderSpider(scrapy.Spider):
         解析微博div
         这个方法不负责检查div是否是一个正常的有内容的div，如果解析不出内容会返回None，请在调用它的地方处理
 
-        :param div: //div[@tbinfo]
+        :param div: //div[@tbinfo] 是etree.HTML().xpath()
         :param get_all_comment:是否获取该条微博所有评论
         :param get_all_r_comment:是否获取源微博所有评论（如果有源微博）
         :param t_bid: 如果这是条转发微博的源微博，t_bid是转发微博的bid，否则空
@@ -395,10 +388,9 @@ class WeiboSpiderSpider(scrapy.Spider):
             logging.warning("r wb解析失败 t_bid{}".format(t_bid))
             time.sleep(3)
             return
-
-        if self.config["print_level"]:
-            print("开始解析微博 {}".format(weibo_url))
         logging.info("开始解析 {}".format(weibo_url))
+        if self.config["print_level"]:
+            print("\n开始解析微博 {}".format(weibo_url), end="\t")
 
         # bid
         bid_ele = parse.xpath(".//a[@node-type='feed_list_item_date']/@href")
@@ -408,7 +400,8 @@ class WeiboSpiderSpider(scrapy.Spider):
         ident = bid.split("/")[0]
         if ident in self.saved_key:
             if self.config["print_level"]:
-                logging.info("当前微博 {} 在之前已保存，跳过".format(bid))
+                logging.info("当前微博 {} 在之前已保存，跳过解析".format(bid))
+                print("当前微博 {} 在之前已保存，跳过解析".format(bid), end="")
             return
 
         # 发表时间戳
@@ -465,7 +458,7 @@ class WeiboSpiderSpider(scrapy.Spider):
         is_content_long = parse.xpath(".//a[contains(@class,'WB_text_opt')]")
         # 如果有折叠的部分
         if is_content_long:
-            content_parse = self.rquests_get_weibo_div(self.session, weibo_url)
+            content_parse = self.rquests_get_weibo_div(weibo_url)
             content_ele = content_parse.xpath(".//div[@node-type='feed_list_content']//text()")
         else:
             content_ele = parse.xpath(".//div[@node-type='feed_list_content']//text()")
@@ -628,7 +621,7 @@ class WeiboSpiderSpider(scrapy.Spider):
             meta["wb_type"] = "r_wb"
             meta["count"] = 1
             # 源微博的get_all_comment 用的是当前的 get_all_r_comment。
-            # 源微博的get_all_r_comment不会被用到，写啥都无所谓
+            # 源微博的get_all_r_comment不会被用到（因为源微博不会有它的源微博），写啥都无所谓
             meta["get_all_comment"] = get_all_r_comment
             meta["get_all_r_comment"] = 0
             yield Request(r_url, callback=self.get_single_wb, cookies=self.cookies, meta=meta,
@@ -665,9 +658,9 @@ class WeiboSpiderSpider(scrapy.Spider):
 
         yield weiboItem1
 
-    def parse_comment_from_div(self, h_comment_div, comment_type, superior_id, ):
+    def parse_comment_from_div(self, h_comment_div, comment_type, superior_id):
         """
-        :param h_comment_div: div，我也不记得我为什么要加h_了
+        :param h_comment_div: div，我也不记得我为什么要加h_了。//div[@comment_id]
         :param comment_type: root 或者 child
         :param superior_id: 上级id，root评论上级id为微博bid，child评论上级为root评论id
         :return: 一个评论item，返回后记得把返回值yield
@@ -810,7 +803,7 @@ class WeiboSpiderSpider(scrapy.Spider):
 
     def get_user_ident(self):
         """
-        获取用户标识 用户名[用户id]
+        获取用户标识 用户名[用户id]，检测下网络
 
         :return:
         """
@@ -841,6 +834,10 @@ class WeiboSpiderSpider(scrapy.Spider):
         return user_ident
 
     def get_page_num(self):
+        """
+
+        :return: 该用户微博总页数
+        """
         user_id = self.config["personal_homepage_config"]["user_id"]
         sub_part_url_base = "https://weibo.com/p/aj/v6/mblog/mbloglist?ajwvr=6&domain=100505&visible=0&is_all=1" \
                             "&profile_ftype=1&page={}&pagebar={}&pl_name=Pl_Official_MyProfileFeed__20" \
@@ -958,7 +955,6 @@ class WeiboSpiderSpider(scrapy.Spider):
     def t_is_divs_in_time_range(self, divs, check_early, check_later):
         """
         这段别再动了，要梳逻辑的话对着这个梳 https://sm.ms/image/qCag3m4EuwT6hI2
-
         检查一组div是是否在时间范围内
         :param divs: etree.HTML() 的divs
         :return:
@@ -1011,6 +1007,7 @@ class WeiboSpiderSpider(scrapy.Spider):
 
     def t_is_time_in_range(self, time1):
         """
+        time1是否在指定时间范围内
         包早不包晚
         :param time1: 毫秒时间戳(13位)或 "%Y-%m-%d %H:%M"格式的字符串
         :return:
@@ -1056,7 +1053,7 @@ class WeiboSpiderSpider(scrapy.Spider):
         else:
             return result > 0
 
-    def rquests_get_weibo_div(self, session, url):
+    def rquests_get_weibo_div(self, url):
         # 对单条微博的链接发起请求，解析出div[@tbinfo]
         # 链接格式为 https://weibo.com/xxxxxxx/xxxxxxx 例：https://weibo.com/5762457113/K058KnPJb
         # 有些需要即时返回结果的会调这个方法

@@ -162,7 +162,8 @@ def check_config():
 def get_key_word(user_Chinese_symbols=True):
     """
     通过配置文件生成存到redis中key的名字
-    :return:
+    :param user_Chinese_symbols:
+    :return: 将时间设置中英文":"符替换为中文"："
     """
     config_str = open("./file/config.json", "r", encoding="gbk").read()
     config = json.loads(config_str, encoding="utf-8")
