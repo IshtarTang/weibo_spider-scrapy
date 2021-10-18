@@ -1,7 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="eb9cf637-533c-4a9a-aaf5-eae3659b01ac" name="Default Changelist" comment="" />
+    <list default="true" id="eb9cf637-533c-4a9a-aaf5-eae3659b01ac" name="Default Changelist" comment="发现点bug但是不大">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/T_filter/Filtre1.py" beforeDir="false" afterPath="$PROJECT_DIR$/T_filter/Filtre1.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/file/config.json" beforeDir="false" afterPath="$PROJECT_DIR$/file/config.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/scrapy_weiboSpider/pipelines.py" beforeDir="false" afterPath="$PROJECT_DIR$/scrapy_weiboSpider/pipelines.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/scrapy_weiboSpider/settings.py" beforeDir="false" afterPath="$PROJECT_DIR$/scrapy_weiboSpider/settings.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/scrapy_weiboSpider/spiders/weibo_spider.py" beforeDir="false" afterPath="$PROJECT_DIR$/scrapy_weiboSpider/spiders/weibo_spider.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/日志" beforeDir="false" afterPath="$PROJECT_DIR$/日志" afterDir="false" />
+    </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -48,16 +56,17 @@
     <property name="settings.editor.selected.configurable" value="terminal" />
   </component>
   <component name="RecentsManager">
-    <key name="CopyFile.RECENT_KEYS">
-      <recent name="C:\Users\18975\PycharmProjects\scrapy_weiboSpider\scrapy_weiboSpider\file" />
-      <recent name="C:\Users\18975\PycharmProjects\Ish_spider\src\scrapy_weiboSpider\old_code" />
-    </key>
     <key name="MoveFile.RECENT_KEYS">
       <recent name="C:\Users\18975\PycharmProjects\scrapy_weiboSpider\log\d6" />
       <recent name="C:\Users\18975\PycharmProjects\scrapy_weiboSpider\log\d5" />
       <recent name="C:\Users\18975\PycharmProjects\scrapy_weiboSpider\test_code" />
       <recent name="C:\Users\18975\PycharmProjects\scrapy_weiboSpider\log\d4" />
       <recent name="C:\Users\18975\PycharmProjects\scrapy_weiboSpider\scrapy_weiboSpider\spiders\backup" />
+    </key>
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="C:\Users\18975\PycharmProjects\scrapy_weiboSpider\file" />
+      <recent name="C:\Users\18975\PycharmProjects\scrapy_weiboSpider\scrapy_weiboSpider\file" />
+      <recent name="C:\Users\18975\PycharmProjects\Ish_spider\src\scrapy_weiboSpider\old_code" />
     </key>
   </component>
   <component name="RunDashboard">
@@ -246,7 +255,10 @@
       <workItem from="1629022115092" duration="596000" />
       <workItem from="1629111758037" duration="595000" />
       <workItem from="1629367129972" duration="6000" />
-      <workItem from="1631159223857" duration="4708000" />
+      <workItem from="1631159223857" duration="8124000" />
+      <workItem from="1631197746020" duration="542000" />
+      <workItem from="1634096994142" duration="960000" />
+      <workItem from="1634459056353" duration="18605000" />
     </task>
     <task id="LOCAL-00001" summary="发现点bug但是不大">
       <created>1631173131950</created>
@@ -262,7 +274,14 @@
       <option name="project" value="LOCAL" />
       <updated>1631177767129</updated>
     </task>
-    <option name="localTasksCounter" value="3" />
+    <task id="LOCAL-00003" summary="发现点bug但是不大">
+      <created>1631178107240</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1631178107240</updated>
+    </task>
+    <option name="localTasksCounter" value="4" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
