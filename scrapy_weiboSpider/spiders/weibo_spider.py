@@ -138,8 +138,8 @@ class WeiboSpiderSpider(scrapy.Spider):
                             "&id=100505{}&script_uri=/{}/profile&feed_type=0&pre_page={}&domain_op=100505&__rnd={} "
         # 页数循环
         user_id = self.config["personal_homepage_config"]["user_id"]
-        # for page in range(1, page_num + 1):
-        for page in range(1, 2):
+        for page in range(1, page_num + 1):
+        # for page in range(1, 2):
             url1 = first_part_url_base.format(user_id, page)
             url2 = sub_part_url_base.format(page, 0, user_id, user_id, page, int(time.time() * 1000))
             url3 = sub_part_url_base.format(page, 1, user_id, user_id, page, int(time.time() * 1000))
