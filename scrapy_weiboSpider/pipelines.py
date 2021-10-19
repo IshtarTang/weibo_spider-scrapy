@@ -167,6 +167,9 @@ class ScrapyWeibospiderPipeline(object):
         new_simple_wb_info = self.to_simple_info(all_wb_dict)
         # 将新的微博简单信息加进去
         simple_wb_dict.update(self.classify_dicts(new_simple_wb_info, "bid"))
+        # 简单信息写入到文件
+        self.write_json(simple_wb_dict, self.simple_wb_info_fileapht)
+
         for wb in wb_list:
             # 找源微博
             if wb["r_href"]:
@@ -176,8 +179,6 @@ class ScrapyWeibospiderPipeline(object):
         wb_list = self.drop_duplicate(wb_list, "bid")
         # 微博写入到文件
         self.write_json(wb_list, self.wb_result_filepaht)
-        # 简单信息写入到文件
-        self.write_json(simple_wb_dict, self.simple_wb_info_fileapht)
 
         # 清空临时文件
         input1 = input("\n文件保存完毕，是否清空临时文件（yes/no）")

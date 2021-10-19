@@ -66,12 +66,9 @@ class WeiboSpiderSpider(scrapy.Spider):
     print("本次运行的文件key为 {}".format(key_word))
     if os.path.exists("./file" + "/" + key_word + "/wb_result.json"):
         print("目标路径下已有上次运行产生的文件，本次运行爬取的微博会更新到文件中")
-    print("按任意键继续，或Esc以退出")
-    x = ord(msvcrt.getch())
-    if x == 27:
-        print("程序退出")
-        quit()
-    pre_save_file_path = "./file" + "/" + key_word + "/prefile/simple_wb_info.json"
+
+    pre_save_file_path1 = "./file" + "/" + key_word + "/prefile/simple_wb_info.json"
+    pre_save_file_path2 = "./file" + "/" + key_word + "/prefile/weibo.txt"
     fail_url_filepath = "./file" + "/" + key_word + "fail_url.txt"
 
     headers = {
@@ -81,15 +78,37 @@ class WeiboSpiderSpider(scrapy.Spider):
     session = requests.session()
     session.headers = headers
     session.cookies.update(cookies)
+    saved_key = []
 
-    if os.path.exists(pre_save_file_path):
-        saved_wb = read_json(pre_save_file_path)
-        saved_key = list(saved_wb.keys())
-    else:
-        saved_key = []
+    # 读出两个预写文件，拿出已经爬过的bid
+    if os.path.exists(pre_save_file_path1):
+        saved_wb1 = read_json(pre_save_file_path1)
+        saved_key = list(saved_wb1.keys())
 
-    # 一个requests的session，在解析部分有需要立刻返回结果的请求
+    if os.path.exists(pre_save_file_path2):
+        file1 = open(pre_save_file_path2, "r", encoding="utf-8").read().strip()
+        tmp_str = "[" + ",".join(file1.split("\n")) + "]"
+        file = json.loads(tmp_str, encoding="utf-8")
+        for y in file:
+            saved_key.append(y["bid"])
+    saved_key = list(set(saved_key))
+    if saved_key:
+        print("读取到上次运行保存的微博{}条".format(len(saved_key)))
+
+    print("按任意键继续，或Esc以退出")
+    x = ord(msvcrt.getch())
+    if x == 27:
+        print("程序退出")
+        quit()
+
     def session_get(self, url):
+        """
+        一个requests的session，在解析部分有需要立刻返回结果的请求
+        session30分钟会过期，所有如果跟上次调用session的时间间隔超过10分钟就更新session
+        :param url:
+        :return:
+        """
+
         # 如果session创建时间超过10分钟，重置session
         if time.time() - self.session_start_time > 600:
             session = requests.session()
@@ -97,7 +116,13 @@ class WeiboSpiderSpider(scrapy.Spider):
             session.cookies.update(self.cookies)
             self.session_start_time = time.time()
             logging.info("session更新，更新时间{}".format(time.time()))
-        response = self.session.get(url)
+        response = ""
+        for i in range(0, 3):
+            try:
+                response = self.session.get(url, timeout=30)
+                break
+            except:
+                continue
         return response
 
     def start_requests(self):
@@ -113,8 +138,8 @@ class WeiboSpiderSpider(scrapy.Spider):
                             "&id=100505{}&script_uri=/{}/profile&feed_type=0&pre_page={}&domain_op=100505&__rnd={} "
         # 页数循环
         user_id = self.config["personal_homepage_config"]["user_id"]
-        for page in range(1, page_num + 1):
-        # for page in range(1, 2):
+        # for page in range(1, page_num + 1):
+        for page in range(1, 2):
             url1 = first_part_url_base.format(user_id, page)
             url2 = sub_part_url_base.format(page, 0, user_id, user_id, page, int(time.time() * 1000))
             url3 = sub_part_url_base.format(page, 1, user_id, user_id, page, int(time.time() * 1000))
@@ -390,7 +415,7 @@ class WeiboSpiderSpider(scrapy.Spider):
             return
         logging.info("开始解析 {}".format(weibo_url))
         if self.config["print_level"]:
-            print("\n开始解析微博 {}".format(weibo_url), end="\t")
+            print("开始解析微博 {}".format(weibo_url))
 
         # bid
         bid_ele = parse.xpath(".//a[@node-type='feed_list_item_date']/@href")
@@ -398,31 +423,6 @@ class WeiboSpiderSpider(scrapy.Spider):
         logging.info("bid - {}".format(bid))
 
         ident = bid.split("/")[0]
-        if ident in self.saved_key:
-            if self.config["print_level"]:
-                logging.info("当前微博 {} 在之前已保存，跳过解析".format(bid))
-                print("当前微博 {} 在之前已保存，跳过解析".format(bid), end="")
-            return
-
-        # 发表时间戳
-        public_timestamp = int(parse.xpath(".//div[contains(@class,'WB_from')]/a/@date")[0])
-        if check_time:
-            if not self.t_is_time_in_range(public_timestamp):
-                time_range_config = self.config["personal_homepage_config"]["time_range"]
-                tmp_content = parse.xpath(".//div[@node-type='feed_list_content']//text()")
-                content = "\n".join(tmp_content).replace("\u200b", ""). \
-                    replace("//\n@", "//@").replace("\n:", ":").replace("\xa0", "").replace("\xa1", "").strip()
-                logging.info(
-                    "当前微博[{}]{} 时间({})不在要求范围内[{}-{}]，被过滤掉"
-                        .format(public_timestamp, content[:10], public_timestamp,
-                                time_range_config["start_time"], time_range_config["stop_time"])
-                )
-
-                return
-
-                # 用户id，微博为转发时格式为 ‘ouid=6123910030&rouid=5992829552’
-        user_id_ele = parse.xpath(".//@tbinfo")[0].split("&")[0]
-        user_id = re.search(r"ouid=(\d+)", user_id_ele).group(1)
 
         # 用户名，同时判断是否为快转
         quick_transmit = 0
@@ -452,6 +452,59 @@ class WeiboSpiderSpider(scrapy.Spider):
                 # 是原创微博
                 is_original = 1
             r_href = ""
+
+        # 源微博
+        r_weibo = {}  # 先占个位，Pipeline里再写进去
+        # 存在源微博，且源微博可见，
+        if r_href and "源微博已不可见" not in remark:
+            # 之前没有保存过源微博
+            if r_href.split("/")[-1] not in self.saved_key:
+                r_url = "https://weibo.com" + r_href
+                if self.config["print_level"]:
+                    print("微博为转发微博，开始解析源微博 {}".format(r_url))
+                meta = {}
+                meta["t_weibo_div"] = etree.tostring(div).decode("utf-8")
+                meta["t_bid"] = bid
+                meta["wb_type"] = "r_wb"
+                meta["count"] = 1
+                # 源微博的get_all_comment 用的是当前的 get_all_r_comment。
+                # 源微博的get_all_r_comment不会被用到（因为源微博不会有它的源微博），写啥都无所谓
+                meta["get_all_comment"] = get_all_r_comment
+                meta["get_all_r_comment"] = 0
+                # 禁用重定向
+                meta["dont_redirect"] = True
+                meta["handle_httpstatus_list"] = [302]
+                yield Request(r_url, callback=self.get_single_wb, cookies=self.cookies, meta=meta,
+                              errback=self.deal_err)
+            # 之前保存过
+            else:
+                print("微博为转发微博，源微博 {} 已保存过".format("https://weibo.com" + r_href))
+
+        if ident in self.saved_key:
+            if self.config["print_level"]:
+                logging.info("当前微博 {} 在之前已保存，跳过解析".format(bid))
+                print("当前微博 {} 在之前已保存，跳过解析".format(bid))
+            return
+
+        # 发表时间戳
+        public_timestamp = int(parse.xpath(".//div[contains(@class,'WB_from')]/a/@date")[0])
+        if check_time:
+            if not self.t_is_time_in_range(public_timestamp):
+                time_range_config = self.config["personal_homepage_config"]["time_range"]
+                tmp_content = parse.xpath(".//div[@node-type='feed_list_content']//text()")
+                content = "\n".join(tmp_content).replace("\u200b", ""). \
+                    replace("//\n@", "//@").replace("\n:", ":").replace("\xa0", "").replace("\xa1", "").strip()
+                logging.info(
+                    "当前微博[{}]{} 时间({})不在要求范围内[{}-{}]，被过滤掉"
+                        .format(public_timestamp, content[:10], public_timestamp,
+                                time_range_config["start_time"], time_range_config["stop_time"])
+                )
+
+                return
+
+                # 用户id，微博为转发时格式为 ‘ouid=6123910030&rouid=5992829552’
+        user_id_ele = parse.xpath(".//@tbinfo")[0].split("&")[0]
+        user_id = re.search(r"ouid=(\d+)", user_id_ele).group(1)
 
         # 正文
         # 文章长时会有收起的部分，需要另外发送请求
@@ -609,23 +662,6 @@ class WeiboSpiderSpider(scrapy.Spider):
                           meta={"get_all_comment": get_all_comment, "superior_id": bid,
                                 "count": 1, "wb_url": weibo_url}, dont_filter=True, errback=self.deal_err)
             # quick_log("{} - {}".format(1, first_comment_url))
-        # 源微博
-        r_weibo = {}  # 先占个位，Pipeline里再写进去
-        if r_href and "源微博已不可见" not in remark:
-            r_url = "https://weibo.com" + r_href
-            if self.config["print_level"]:
-                print("微博为转发微博，开始解析源微博 {}".format(r_url))
-            meta = {}
-            meta["t_weibo_div"] = etree.tostring(div).decode("utf-8")
-            meta["t_bid"] = bid
-            meta["wb_type"] = "r_wb"
-            meta["count"] = 1
-            # 源微博的get_all_comment 用的是当前的 get_all_r_comment。
-            # 源微博的get_all_r_comment不会被用到（因为源微博不会有它的源微博），写啥都无所谓
-            meta["get_all_comment"] = get_all_r_comment
-            meta["get_all_r_comment"] = 0
-            yield Request(r_url, callback=self.get_single_wb, cookies=self.cookies, meta=meta,
-                          errback=self.deal_err)
 
         # 话题，@的用户，地址    不想写，以后可能会补上
         topic_list = []

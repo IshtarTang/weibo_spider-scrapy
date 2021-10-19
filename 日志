@@ -7,3 +7,11 @@ user_nameÑ¡ÏîÓÐÎÊÌâ£¬Õâ¸öÑ¡Ïî»áÓ°Ïì´æÔÚredisÖÐµÄkey£¬ÓÃÖÐÎÄËüÓÐÊ±ºò»á¶Á²»µ½£¬Ö®Ç
 
 2021.10.18
 ÐÞÁË¸öÖØ¸´Æô¶¯³ÌÐò»á·¢ÉúµÄbug£ºÔ¤Ð´ÎÄ¼þ±»¸²¸Ç£¬µ¼ÖÂ×îºóÕûºÏÐ´ÈëµÄÊ±ºòÕÒ²»µ½Ô´Î¢²©¡£
+
+2021.10.19
+·¢ÏÖbug£¬ÓÐµÄÒ³ÃæÃ÷Ã÷ÓÐ£¬µ«»áÄªÃû±»302µ½ https://weibo.com/sorry?pagenotfound£¬Ëì½ûÓÃÁËÒ»Ð©ÇëÇóµÄÖØ¶¨Ïò
+×öÁËµãÓÅ»¯£¬³ÌÐòÖÐ¶ÏºóÆô¶¯Ö®Ç°½âÎö¹ýµÄÎÄ¼þ²»»áÔÙ´Î½âÎö£¨Ö®Ç°µÄÊÇÓÃ½á¹ûÎÄ¼þÅÐ¶ÏÊÇ·ñ½âÎö¹ý£¬ÏÖÔÚ»¹Ôö¼ÓÁËÓÃÔ¤´æÎÄ¼þÅÐ¶Ï£©
+ÔÚÅÐ¶ÏÎ¢²©Ò»ÌõÎ¢²©ÊÇ·ñÌø¹ýÇ°£¬Ôö¼ÓÁËÅÐ¶ÏÊÇ·ñÒªÇëÇóÔ´Î¢²©£¨Ö®Ç°ÓÐ±ÈÈçÒ»ÌõÎ¢²©aÒÑ¾­½âÎö¹ý£¬µ«Ô´Î¢²©½âÎöÖÐ¶Ï£¬ÔÙÆô¶¯Ê±Òòa½âÎö¹ý¶øÌø¹ýÁËÔ´Î¢²©½âÎö£©
+piplineÖÐ°ÑÐ´simple_wb_infoµÄÊ±¼äÌáÇ°ÁËÒ»µã
+
+
