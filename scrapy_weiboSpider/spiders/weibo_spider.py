@@ -89,8 +89,8 @@ class WeiboSpiderSpider(scrapy.Spider):
         file1 = open(pre_save_file_path2, "r", encoding="utf-8").read().strip()
         tmp_str = "[" + ",".join(file1.split("\n")) + "]"
         file = json.loads(tmp_str, encoding="utf-8")
-        for y in file:
-            saved_key.append(y["bid"])
+        for x in file:
+            saved_key.append(x["bid"])
     saved_key = list(set(saved_key))
     if saved_key:
         print("读取到上次运行保存的微博{}条".format(len(saved_key)))
@@ -139,7 +139,7 @@ class WeiboSpiderSpider(scrapy.Spider):
         # 页数循环
         user_id = self.config["personal_homepage_config"]["user_id"]
         for page in range(1, page_num + 1):
-        # for page in range(1, 2):
+            # for page in range(1, 2):
             url1 = first_part_url_base.format(user_id, page)
             url2 = sub_part_url_base.format(page, 0, user_id, user_id, page, int(time.time() * 1000))
             url3 = sub_part_url_base.format(page, 1, user_id, user_id, page, int(time.time() * 1000))
@@ -475,10 +475,11 @@ class WeiboSpiderSpider(scrapy.Spider):
                 meta["dont_redirect"] = True
                 meta["handle_httpstatus_list"] = [302]
                 yield Request(r_url, callback=self.get_single_wb, cookies=self.cookies, meta=meta,
-                              errback=self.deal_err)
+                              errback=self.deal_err, dont_filter=True)
             # 之前保存过
             else:
                 print("微博为转发微博，源微博 {} 已保存过".format("https://weibo.com" + r_href))
+                logging.info("源微博 {} 已保存过，跳过解析".format("https://weibo.com" + r_href))
 
         if ident in self.saved_key:
             if self.config["print_level"]:
@@ -750,7 +751,7 @@ class WeiboSpiderSpider(scrapy.Spider):
             comment_link = comment_link_ele[0]
             real_comment_link = comment_link
             try:
-                real_comment_link = requests.get(comment_link, headers=self.headers).url
+                real_comment_link = requests.get(comment_link, headers=self.headers, timeout=30).url
             except:
                 pass
         commentItem1 = commentItem()

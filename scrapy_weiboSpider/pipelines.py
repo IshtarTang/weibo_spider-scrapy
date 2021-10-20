@@ -8,7 +8,7 @@ from scrapy_weiboSpider.items import *
 from scrapy_weiboSpider.settings import get_key_word
 import json
 import os
-import sys
+import logging
 
 
 class ScrapyWeibospiderPipeline(object):
@@ -173,9 +173,12 @@ class ScrapyWeibospiderPipeline(object):
         for wb in wb_list:
             # 找源微博
             if wb["r_href"]:
-                simple_r_wb_info = simple_wb_dict[wb["r_href"].split("/")[-1]][0]
-                wb["r_weibo"] = simple_r_wb_info
-
+                if wb["r_href"].split("/")[-1] in simple_wb_dict.keys():
+                    simple_r_wb_info = simple_wb_dict[wb["r_href"].split("/")[-1]][0]
+                    wb["r_weibo"] = simple_r_wb_info
+                else:
+                    wb["r_weibo"] = "源微博暂无法获取"
+                    logging.info("微博 {} 的源微博 {} 获取失败".format(wb["wb_url"],wb["r_href"]))
         wb_list = self.drop_duplicate(wb_list, "bid")
         # 微博写入到文件
         self.write_json(wb_list, self.wb_result_filepaht)
