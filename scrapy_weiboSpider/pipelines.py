@@ -11,6 +11,11 @@ import os
 import logging
 
 
+def log_and_print(text):
+    logging.info(text)
+    print(text)
+
+
 class ScrapyWeibospiderPipeline(object):
 
     def open_spider(self, spider):
@@ -79,10 +84,13 @@ class ScrapyWeibospiderPipeline(object):
 
 
         elif isinstance(item, commentItem):
-
+            if item["comment_type"] == "root":
+                superior_id = item["superior_id"].split("/")[2]
+            else:
+                superior_id = item["superior_id"]
             comm_dict = {
                 "comment_type": item["comment_type"],
-                "superior_id": item["superior_id"],
+                "superior_id": superior_id,
                 "comment_id": item["comment_id"],
                 "content": item["content"],
                 "user_name": item["user_name"],
@@ -107,6 +115,7 @@ class ScrapyWeibospiderPipeline(object):
             return "item notype {}".format(item)
 
     def close_spider(self, spider):
+        logging.info("文件整合开始")
         # 关闭过程文件
         self.weibo_file.close()
         self.rcomm_file.close()
@@ -117,6 +126,7 @@ class ScrapyWeibospiderPipeline(object):
         rcomms_str = open(self.rcomm_filepath, "r", encoding="utf-8").read()
         wb_str = open(self.weibo_filepath, "r", encoding="utf-8").read()
         if not wb_str:
+            log_and_print("无微博，程序退出")
             return
         if ccomms_str:
             ccomm_dicts = [json.loads(str1) for str1 in ccomms_str.strip().split("\n")]
@@ -152,7 +162,6 @@ class ScrapyWeibospiderPipeline(object):
         # 结果文件
         wb_list = self.read_json(self.wb_result_filepaht)
         r_wb_list = self.read_json(self.r_wb_result_filepaht)
-
         # 将wb和r_wb分开
         for wb in all_wb_dict:
             if wb["t_bid"]:
@@ -160,6 +169,7 @@ class ScrapyWeibospiderPipeline(object):
             else:
                 wb_list.append(wb)
         self.write_json(r_wb_list, self.r_wb_result_filepaht)
+        open("./test.json", "w", encoding="utf-8").write(json.dumps(wb_list, ensure_ascii=False, indent=4))
 
         # 读取之前的微博信息
         simple_wb_dict = self.read_json(self.simple_wb_info_fileapht)
@@ -177,19 +187,25 @@ class ScrapyWeibospiderPipeline(object):
                     simple_r_wb_info = simple_wb_dict[wb["r_href"].split("/")[-1]][0]
                     wb["r_weibo"] = simple_r_wb_info
                 else:
-                    wb["r_weibo"] = "源微博暂无法获取"
-                    logging.info("微博 {} 的源微博 {} 获取失败".format(wb["wb_url"],wb["r_href"]))
+                    wb["r_weibo"] = "源微博无法获取"
+                    log_and_print("微博 {} 的源微博 {} 获取失败".format(wb["wb_url"], wb["r_href"]))
         wb_list = self.drop_duplicate(wb_list, "bid")
+        open("./test1.json", "w", encoding="utf-8").write(json.dumps(wb_list, ensure_ascii=False, indent=4))
+
         # 微博写入到文件
         self.write_json(wb_list, self.wb_result_filepaht)
 
         # 清空临时文件
         input1 = input("\n文件保存完毕，是否清空临时文件（yes/no）")
         if input1 == "yes":
+            log_and_print("清空临时文件")
             for t_filepaht in [self.weibo_filepath, self.rcomm_filepath, self.ccomm_filepath]:
                 if os.path.exists(t_filepaht):
                     os.remove(t_filepaht)
-        print("保存结束，文件保存于{}".format(self.filedir))
+                    log_and_print("删除文件 {}".format(t_filepaht))
+        else:
+            log_and_print("保留临时文件")
+        log_and_print("保存结束，文件保存于{}\n程序正常退出".format(self.filedir))
         # open(self.weibo_filepath, "w", encoding="utf-8").write("")
         # open(self.rcomm_filepath, "w", encoding="utf-8").write("")
         # open(self.ccomm_filepath, "w", encoding="utf-8").write("")
@@ -197,21 +213,31 @@ class ScrapyWeibospiderPipeline(object):
     def get_get_filepath(self):
         key_word = get_key_word()
         path = self.base_path + "/" + key_word
-        print("文件路径 {}".format(path))
+        log_and_print("文件路径 {}".format(path))
         return path
 
     def init_file(self):
-        if not os.path.exists(self.filedir):
-            os.makedirs(self.filedir)
-        if not os.path.exists(self.pre_file_path):
-            os.makedirs(self.pre_file_path)
+        # 文件目录和预写文件目录
+        for path1 in [self.filedir, self.pre_file_path]:
+
+            if not os.path.exists(path1):
+                os.makedirs(path1)
+                log_and_print("新建文件夹 {}".format(path1))
+            else:
+                log_and_print("文件夹 {} 已存在".format(path1))
+        # 简单文件
         if not os.path.exists(self.simple_wb_info_fileapht):
             self.write_json({}, self.simple_wb_info_fileapht)
-        if not os.path.exists(self.wb_result_filepaht):
-            self.write_json([], self.wb_result_filepaht)
-
-        if not os.path.exists(self.r_wb_result_filepaht):
-            self.write_json([], self.r_wb_result_filepaht)
+            log_and_print("新建文件 {}".format(self.simple_wb_info_fileapht))
+        else:
+            log_and_print("文件 {} 已存在".format(self.simple_wb_info_fileapht))
+        # 两个结果文件
+        for path1 in [self.wb_result_filepaht, self.r_wb_result_filepaht]:
+            if not os.path.exists(path1):
+                self.write_json([], path1)
+                log_and_print("新建文件 {}".format(path1))
+            else:
+                log_and_print("文件 {} 已存在".format(path1))
 
     def write_json(self, file, path, coding="utf-8"):
         open(path, "w", encoding=coding).write(json.dumps(file, ensure_ascii=False, indent=4))
@@ -271,4 +297,5 @@ class ScrapyWeibospiderPipeline(object):
         d_dict = {}
         for dict1 in dicts:
             d_dict[dict1[d_key]] = dict1
+
         return [d_dict[key] for key in d_dict.keys()]
