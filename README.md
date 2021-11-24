@@ -146,13 +146,19 @@
 
 假如你爬了A的微博主页，其中wb_result.json中为A发过的所有微博，r_wb_result.json中为A所有转发微博的源微博。
 
-文件中一个dict为一条微博。[文件示例](%E7%AC%94%E8%AE%B0%E5%9B%BE/README/保存文件示例.png) [文件中各字段的含义](%E7%AC%94%E8%AE%B0%E5%9B%BE/README/%E4%BF%9D%E5%AD%98%E6%96%87%E4%BB%B6%E5%AD%97%E6%AE%B5-1628644419723.png)
+文件中一个dict为一条微博。
+
+[结果文件示例](%E7%AC%94%E8%AE%B0%E5%9B%BE/README/保存文件示例.png) 
+
+[结果文件中各字段的含义](%E7%AC%94%E8%AE%B0%E5%9B%BE/README/%E4%BF%9D%E5%AD%98%E6%96%87%E4%BB%B6%E5%AD%97%E6%AE%B5-1628644419723.png)
+
+
 
 prefile中为文件记录和过程文件。
 
 其中simple_wb_info.json会在程序结束时产生，里面是所有爬过的微博的简单信息，如果程序只启动一次的话这个文件可以直接删，这个文件是用在重复启动时节约时间的。
 
-weibo.txt、rcomm.txt 和ccomm.txt是过程文件，weibo是微博信息，rcomm是父评论信息，ccomm是子评论信息，程序结束时会整合到两个result文件中，这三个文件自动删除。
+weibo.txt、rcomm.txt 和ccomm.txt是过程文件，weibo是微博信息，rcomm是根评论信息，ccomm是子评论信息，程序结束时会整合到两个result文件中，运行结束后可以选择是否删除。
 
 
 
@@ -172,7 +178,7 @@ weibo.txt、rcomm.txt 和ccomm.txt是过程文件，weibo是微博信息，rcomm
 
 <br>
 
-程序并没有对每一条微博的详情页都进行一次请求，比如爬取用户主页模式，首先请求的是这个页面 [李镜合首页](https://weibo.com/u/6227479352?is_all=1) ，一次请求可以获取到15条微博，这个页面足够获取到大多数微博的完整信息，可以直接进行解析，但超过140字的微博会被折叠，这种时候才会请求微博详情页，比如 [李镜合的微博](https://weibo.com//KrpUXclws)
+程序并没有对每一条微博的详情页都进行一次请求，比如爬取用户主页模式，首先请求的是这个页面 [李镜合首页](https://weibo.com/u/6227479352?is_all=1) ，一次请求可以获取到15条微博，这个页面足够获取到大多数微博的完整信息，可以直接进行解析，但超过140字的微博会被折叠，这种时候才会请求微博详情页，比如 [李镜合的微博](https://weibo.com/6227479352/KrpUXclws)
 
 <br>
 
