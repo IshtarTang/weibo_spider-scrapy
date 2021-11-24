@@ -352,10 +352,13 @@ class WeiboSpiderSpider(scrapy.Spider):
         :param response:
         :return:
         """
+        url = response.url
+        id_search = re.search(r"weibo.com/(\d+)/.*", url)
+        user_id = id_search.group(1)
         scripts = response.xpath("/html/script").extract()
         weibo_parse = None
         for script in scripts:
-            if "feed_list_content" in script:
+            if "feed_list_content" in script and "ouid={}".format(user_id) in script :
                 # 提取出值中的json
                 tmp_json = json.loads(re.search(r"\(({.*})\)", script).group(1), encoding="utf-8")
                 # 获取html。符号编码不知道哪出问题了，手动替换
@@ -1097,6 +1100,8 @@ class WeiboSpiderSpider(scrapy.Spider):
         # 有些需要即时返回结果的会调这个方法
         weibo_div = ""
         count = 0
+        id_search = re.search(r"weibo.com/(\d+)/.*", url)
+        user_id = id_search.group(1)
         while True:
             count += 1
             if count % 2 == 0:
@@ -1109,9 +1114,9 @@ class WeiboSpiderSpider(scrapy.Spider):
             scripts = weibo_page_parse.xpath("/html/script")
             weibo_parse = ""
             # 找到正文内容的script
-            for script in scripts[-1::-1]:
+            for script in scripts:
                 script_str = etree.tostring(script, encoding="utf-8").decode("utf-8")
-                if "feed_list_content" in script_str:
+                if "feed_list_content" in script_str and "ouid={}".format(user_id) in script_str:
                     # 提取出值中的json
                     tmp_json = json.loads(re.search(r"\(({.*})\)", script_str).group(1), encoding="utf-8")
                     # 获取html。符号编码不知道哪出问题了，手动替换
