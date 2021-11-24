@@ -184,10 +184,9 @@ class WeiboSpiderSpider(scrapy.Spider):
         # 没找到divs就重新请求
         if not divs:
             meta["count"] += 1
-            if meta["count"] > 5:
+            if meta["count"] > 4:
                 logging.warning("主页链接{}请求失败次数过多，请确认该页是否有效".format(response.url))
                 print("主页链接{}请求失败次数过多，请确认该页是否有效".format(response.url))
-
                 return
             yield Request(response.url, self.parse_home_page, cookies=self.cookies, meta=meta, dont_filter=True,
                           errback=self.deal_err)
@@ -211,7 +210,7 @@ class WeiboSpiderSpider(scrapy.Spider):
             if meta["count"] > 4 and len(real_div_list) == meta["max_div"]:
                 pass
             else:
-                meta["max_div"] = len(real_div_list)
+                meta["max_div"] = len(real_div_list) if len(real_div_list) > meta["max_div"] else meta["max_div"]
                 meta["count"] += 1
                 yield Request(response.url, self.parse_home_page, cookies=self.cookies, meta=meta, dont_filter=True,
                               errback=self.deal_err)
@@ -355,7 +354,7 @@ class WeiboSpiderSpider(scrapy.Spider):
         """
         scripts = response.xpath("/html/script").extract()
         weibo_parse = None
-        for script in scripts[-1::-1]:
+        for script in scripts:
             if "feed_list_content" in script:
                 # 提取出值中的json
                 tmp_json = json.loads(re.search(r"\(({.*})\)", script).group(1), encoding="utf-8")
@@ -365,23 +364,18 @@ class WeiboSpiderSpider(scrapy.Spider):
                 break
         meta = response.meta
         # 没获取到
-        if weibo_parse == None:
+        if not weibo_parse:
             # 获取次数小于6次，重新获取
             if meta["count"] < 6:
                 meta["count"] += 1
                 yield Request(response.url, self.get_single_wb, meta=meta, cookies=self.cookies,
                               errback=self.deal_err)
                 return
-            # # 是转发微博的源微博
-            # if meta["wb_type"] == "r_wb":
-            #     t_div = etree.HTML(meta["t_weibo_div"])
-            #     wb_item = self.n_parse_weibo_from_forward_div(t_div, meta["t_bid"])
-            #     yield wb_item
-            #     return
-            # 是原创或转发微博
             else:
                 # 返回一个空
                 # yield weiboItem()
+                logging.warning("源微博 {} 获取失败".format(response.url))
+                print("源微博 {} 获取失败".format(response.url))
                 return
         # 获取到div，调用解析方法
         weibo_div = weibo_parse.xpath("//div[@tbinfo]")[0]
@@ -393,13 +387,13 @@ class WeiboSpiderSpider(scrapy.Spider):
 
     def parse_weibo_from_div(self, div, get_all_comment, get_all_r_comment, t_bid, check_time):
         """
-        解析微博div
+        解析微博div，yield评论url的Request、源微博url的Request（如果有的话）、解析出的wbItem
         这个方法不负责检查div是否是一个正常的有内容的div，如果解析不出内容会返回None，请在调用它的地方处理
         :param div: //div[@tbinfo] 是etree.HTML().xpath()
         :param get_all_comment:是否获取该条微博所有评论
         :param get_all_r_comment:是否获取源微博所有评论（如果有源微博）
         :param t_bid: 如果这是条转发微博的源微博，t_bid是转发微博的bid，否则空
-        :return: yield 评论url的Request、源微博url的Request（如果有的话）、解析出的wbItem
+        :return:
         """
         remark = ""
         parse = div
@@ -413,7 +407,7 @@ class WeiboSpiderSpider(scrapy.Spider):
             logging.warning("r wb解析失败 t_bid{}".format(t_bid))
             time.sleep(3)
             return
-        logging.info("开始解析 {}".format(weibo_url))
+        logging.info("开始解析 {}  {}".format(weibo_url, [get_all_comment, get_all_r_comment, t_bid]))
         if self.config["print_level"]:
             print("开始解析微博 {}".format(weibo_url))
 
@@ -462,6 +456,7 @@ class WeiboSpiderSpider(scrapy.Spider):
                 r_url = "https://weibo.com" + r_href
                 if self.config["print_level"]:
                     print("微博为转发微博，开始解析源微博 {}".format(r_url))
+                    logging.info("微博为转发微博，开始解析源微博 {}".format(r_url))
                 meta = {}
                 meta["t_weibo_div"] = etree.tostring(div).decode("utf-8")
                 meta["t_bid"] = bid
@@ -478,7 +473,7 @@ class WeiboSpiderSpider(scrapy.Spider):
                               errback=self.deal_err, dont_filter=True)
             # 之前保存过
             else:
-                print("微博为转发微博，源微博 {} 已保存过".format("https://weibo.com" + r_href))
+                print("微博为转发微博，源微博 {} 已保存过，跳过解析".format(r_href))
                 logging.info("源微博 {} 已保存过，跳过解析".format("https://weibo.com" + r_href))
 
         if ident in self.saved_key:
@@ -896,7 +891,7 @@ class WeiboSpiderSpider(scrapy.Spider):
                     break
             except:
                 if count % 3 == 0:
-                    print("获取页数失败 {} 次，请检查网络，或尝试更新cookies".format(count))
+                    print("获取页数失败 {} 次".format(count))
                     time.sleep(3)
                 if count == 10:
                     print("获取页数失败 10 次，设总页数为 1 页")
@@ -946,13 +941,14 @@ class WeiboSpiderSpider(scrapy.Spider):
             p3_divs = []
             # 整页时间晚于规定时间范围，跳过该页
             count = 0
+            # 获取idv
             while True:
                 count += 1
                 if count % 6 == 0:
                     print("重复5次失败，程序休眠30秒")
                     time.sleep(30)
                 if count % 9 == 0:
-                    print("获取page{} 最早微博时间失败8次，默认该页在时间范围内，在后续获取中进行处理")
+                    print("获取page{} 最早微博时间失败8次，默认该页在时间范围内，在后续获取中进行处理".format(page))
                     return result
                 p3_response = self.session_get(url3)
                 try:
