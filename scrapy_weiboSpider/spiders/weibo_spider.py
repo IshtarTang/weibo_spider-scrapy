@@ -421,6 +421,23 @@ class WeiboSpiderSpider(scrapy.Spider):
 
         ident = bid.split("/")[0]
 
+        # 发表时间戳
+        public_timestamp = int(parse.xpath(".//div[contains(@class,'WB_from')]/a/@date")[0])
+        if check_time:
+            if not self.t_is_time_in_range(public_timestamp):
+                time_range_config = self.config["personal_homepage_config"]["time_range"]
+                tmp_content = parse.xpath(".//div[@node-type='feed_list_content']//text()")
+                content = "\n".join(tmp_content).replace("\u200b", ""). \
+                    replace("//\n@", "//@").replace("\n:", ":").replace("\xa0", "").replace("\xa1", "").strip()
+                logging.info(
+                    "当前微博[{}]{} 时间({})不在要求范围内[{}-{}]，被过滤掉"
+                        .format(public_timestamp, content[:10], public_timestamp,
+                                time_range_config["start_time"], time_range_config["stop_time"])
+                )
+
+                return
+
+
         # 用户名，同时判断是否为快转
         quick_transmit = 0
         user_name = parse.xpath(".//a[@class='W_f14 W_fb S_txt1']/text()")
@@ -485,21 +502,7 @@ class WeiboSpiderSpider(scrapy.Spider):
                 print("当前微博 {} 在之前已保存，跳过解析".format(bid))
             return
 
-        # 发表时间戳
-        public_timestamp = int(parse.xpath(".//div[contains(@class,'WB_from')]/a/@date")[0])
-        if check_time:
-            if not self.t_is_time_in_range(public_timestamp):
-                time_range_config = self.config["personal_homepage_config"]["time_range"]
-                tmp_content = parse.xpath(".//div[@node-type='feed_list_content']//text()")
-                content = "\n".join(tmp_content).replace("\u200b", ""). \
-                    replace("//\n@", "//@").replace("\n:", ":").replace("\xa0", "").replace("\xa1", "").strip()
-                logging.info(
-                    "当前微博[{}]{} 时间({})不在要求范围内[{}-{}]，被过滤掉"
-                        .format(public_timestamp, content[:10], public_timestamp,
-                                time_range_config["start_time"], time_range_config["stop_time"])
-                )
 
-                return
 
                 # 用户id，微博为转发时格式为 ‘ouid=6123910030&rouid=5992829552’
         user_id_ele = parse.xpath(".//@tbinfo")[0].split("&")[0]
@@ -695,7 +698,7 @@ class WeiboSpiderSpider(scrapy.Spider):
 
     def parse_comment_from_div(self, h_comment_div, comment_type, superior_id):
         """
-        :param h_comment_div: div，我也不记得我为什么要加h_了。//div[@comment_id]
+        :param h_comment_div: //div[@comment_id]，我也不记得我为什么要加h_了。
         :param comment_type: root 或者 child
         :param superior_id: 上级id，root评论上级id为微博bid，child评论上级为root评论id
         :return: 一个评论item，返回后记得把返回值yield

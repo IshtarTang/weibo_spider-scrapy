@@ -97,16 +97,6 @@ def check_config():
             print("get_all_r_comment 应为 int")
             return False
 
-        # 功能启动检查
-        # function_keys = ["time_range", "update_comment_config"]
-        # enabled_function = []
-        # for function_key in function_keys:
-        #     if t_config[function_key]["enable"]:
-        #         enabled_function.append(function_key)
-        # if len(enabled_function) > 1:
-        #     print("功能 {} 不能同时启用".format("，".join(enabled_function)))
-        #     return False
-
         # 时间范围功能参数检查
         if t_config["time_range"]["enable"]:
             start_time = t_config["time_range"]["start_time"]
@@ -134,7 +124,6 @@ def check_config():
         if not t_config["search_code"]:
             print("搜索关键词不能为空")
             return False
-
         print("这个模式的功能还没开始写")
         return False
 
@@ -162,8 +151,8 @@ def check_config():
 def get_key_word(user_Chinese_symbols=True):
     """
     通过配置文件生成存到redis中key的名字
-    :param user_Chinese_symbols:
-    :return: 将时间设置中英文":"符替换为中文"："
+    :param user_Chinese_symbols:将时间设置中英文":"符替换为中文"："
+    :return:
     """
     config_str = open("./file/config.json", "r", encoding="gbk").read()
     config = json.loads(config_str, encoding="utf-8")
