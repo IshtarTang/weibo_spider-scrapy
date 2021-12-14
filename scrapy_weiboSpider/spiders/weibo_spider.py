@@ -282,26 +282,26 @@ class WeiboSpiderSpider(scrapy.Spider):
             # 解析root评论，塞进pipeline
             comm_item = self.parse_comment_from_div(root_comm_div, "root", meta["superior_id"])
             yield comm_item
-
             # 子评论
             child_comment_divs = root_comm_div.xpath(".//div[@node-type='child_comment']/div[@comment_id]")
             # 有子评论
+            root_comm_id = root_comm_div.xpath("./@comment_id")[0]
+
             if child_comment_divs:
-                root_comm_id = root_comm_div.xpath("./@comment_id")[0]
                 # 解析出来塞进pipeline。这里解析出的部分只是out部分
                 for child_comment_div in child_comment_divs:
                     comm_item = self.parse_comment_from_div(child_comment_div, "child", root_comm_id)
                     yield comm_item
-                    # 是否有更多子评论
-                    sub_child_comment_url_part = root_comm_div.xpath(
-                        ".//a[@action-type='click_more_child_comment_big']/@action-data")
-                    # 有且设定获取所有评论
-                    if sub_child_comment_url_part and meta["get_all_comment"]:
-                        sub_child_comment_url = "https://weibo.com/aj/v6/comment/big?ajwvr=6&{}&from=singleWeiBo&__rnd={}".format(
-                            sub_child_comment_url_part[0], int(time.time() * 1000))
-                        yield Request(sub_child_comment_url, self.get_child_comment,
-                                      cookies=self.cookies, meta={"superior_id": root_comm_id, "count": 1},
-                                      errback=self.deal_err)
+            # 是否有折叠子评论
+            sub_child_comment_url_part = root_comm_div.xpath(
+                ".//a[@action-type='click_more_child_comment_big']/@action-data")
+            # 有且设定获取所有评论
+            if sub_child_comment_url_part and meta["get_all_comment"]:
+                sub_child_comment_url = "https://weibo.com/aj/v6/comment/big?ajwvr=6&{}&from=singleWeiBo&__rnd={}".format(
+                    sub_child_comment_url_part[0], int(time.time() * 1000))
+                yield Request(sub_child_comment_url, self.get_child_comment,
+                              cookies=self.cookies, meta={"superior_id": root_comm_id, "count": 1},
+                              errback=self.deal_err)
 
     def get_child_comment(self, response):
         """
@@ -358,7 +358,7 @@ class WeiboSpiderSpider(scrapy.Spider):
         scripts = response.xpath("/html/script").extract()
         weibo_parse = None
         for script in scripts:
-            if "feed_list_content" in script and "ouid={}".format(user_id) in script :
+            if "feed_list_content" in script and "ouid={}".format(user_id) in script:
                 # 提取出值中的json
                 tmp_json = json.loads(re.search(r"\(({.*})\)", script).group(1), encoding="utf-8")
                 # 获取html。符号编码不知道哪出问题了，手动替换
@@ -401,7 +401,6 @@ class WeiboSpiderSpider(scrapy.Spider):
         remark = ""
         parse = div
         # 微博链接
-
         try:
             part_url = parse.xpath(".//div[contains(@class,'WB_from')]/a/@href")[0]
             weibo_url = "https://weibo.com" + part_url
@@ -436,7 +435,6 @@ class WeiboSpiderSpider(scrapy.Spider):
                 )
 
                 return
-
 
         # 用户名，同时判断是否为快转
         quick_transmit = 0
@@ -475,8 +473,8 @@ class WeiboSpiderSpider(scrapy.Spider):
             if r_href.split("/")[-1] not in self.saved_key:
                 r_url = "https://weibo.com" + r_href
                 if self.config["print_level"]:
-                    print("微博为转发微博，开始解析源微博 {}".format(r_url))
-                    logging.info("微博为转发微博，开始解析源微博 {}".format(r_url))
+                    print("微博为转发微博，源微博 {}".format(r_url))
+                    logging.info("微博为转发微博，源微博 {}".format(r_url))
                 meta = {}
                 meta["t_weibo_div"] = etree.tostring(div).decode("utf-8")
                 meta["t_bid"] = bid
@@ -502,9 +500,7 @@ class WeiboSpiderSpider(scrapy.Spider):
                 print("当前微博 {} 在之前已保存，跳过解析".format(bid))
             return
 
-
-
-                # 用户id，微博为转发时格式为 ‘ouid=6123910030&rouid=5992829552’
+            # 用户id，微博为转发时格式为 ‘ouid=6123910030&rouid=5992829552’
         user_id_ele = parse.xpath(".//@tbinfo")[0].split("&")[0]
         user_id = re.search(r"ouid=(\d+)", user_id_ele).group(1)
 
