@@ -17,7 +17,6 @@ def log_and_print(text):
 
 
 class ScrapyWeibospiderPipeline(object):
-
     def open_spider(self, spider):
         print("文件准备")
         self.base_path = "./file"
@@ -80,7 +79,7 @@ class ScrapyWeibospiderPipeline(object):
             }
 
             self.weibo_file.write(json.dumps(wb_dict, ensure_ascii=False) + "\n")
-            return "wb {}".format(item["wb_url"])
+            return "wb {} 到暂存文件".format(item["wb_url"].split("?")[0])
 
 
         elif isinstance(item, commentItem):
@@ -130,10 +129,14 @@ class ScrapyWeibospiderPipeline(object):
             return
         if ccomms_str:
             ccomm_dicts = [json.loads(str1) for str1 in ccomms_str.strip().split("\n")]
+            ccomm_dicts = self.drop_duplicate(ccomm_dicts, "comment_id")
         else:
             ccomm_dicts = []
+
         if rcomms_str:
             rcomm_dicts = [json.loads(str1) for str1 in rcomms_str.strip().split("\n")]
+            rcomm_dicts = self.drop_duplicate(rcomm_dicts, "comment_id")
+
         else:
             rcomm_dicts = []
         wb_dict = [json.loads(str1) for str1 in wb_str.strip().split("\n")]
@@ -169,7 +172,6 @@ class ScrapyWeibospiderPipeline(object):
             else:
                 wb_list.append(wb)
         self.write_json(r_wb_list, self.r_wb_result_filepaht)
-        open("./test.json", "w", encoding="utf-8").write(json.dumps(wb_list, ensure_ascii=False, indent=4))
 
         # 读取之前的微博信息
         simple_wb_dict = self.read_json(self.simple_wb_info_fileapht)
@@ -190,7 +192,6 @@ class ScrapyWeibospiderPipeline(object):
                     wb["r_weibo"] = "源微博无法获取"
                     log_and_print("微博 {} 的源微博 {} 获取失败".format(wb["wb_url"], wb["r_href"]))
         wb_list = self.drop_duplicate(wb_list, "bid")
-        open("./test1.json", "w", encoding="utf-8").write(json.dumps(wb_list, ensure_ascii=False, indent=4))
 
         # 微博写入到文件
         self.write_json(wb_list, self.wb_result_filepaht)
@@ -204,11 +205,8 @@ class ScrapyWeibospiderPipeline(object):
                     os.remove(t_filepaht)
                     log_and_print("删除文件 {}".format(t_filepaht))
         else:
-            log_and_print("保留临时文件")
+            log_and_print("保留过程文件")
         log_and_print("保存结束，文件保存于{}\n程序正常退出".format(self.filedir))
-        # open(self.weibo_filepath, "w", encoding="utf-8").write("")
-        # open(self.rcomm_filepath, "w", encoding="utf-8").write("")
-        # open(self.ccomm_filepath, "w", encoding="utf-8").write("")
 
     def get_get_filepath(self):
         key_word = get_key_word()
