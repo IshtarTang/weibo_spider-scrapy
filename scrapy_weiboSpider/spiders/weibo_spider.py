@@ -5,6 +5,7 @@ import json
 import time
 import sys
 from lxml.html import etree
+import traceback
 import re
 from scrapy import Request
 from scrapy.spidermiddlewares.httperror import HttpError
@@ -845,28 +846,30 @@ class WeiboSpiderSpider(scrapy.Spider):
         user_id = self.config["personal_homepage_config"]["user_id"]
         base_url = "https://weibo.com/u/{}?page=1&is_all=1".format(user_id)
         count = 0
+        user_name = ""
         while True:
             count += 1
-            try:
-                first_part_response = self.session_get(base_url)
-                parse = etree.HTML(first_part_response.content.decode("utf-8"))
-                scripts = parse.xpath("//script")
-                re_s = re.search(r"\(({.*})\)", scripts[-1].text.replace("\n", ""))
-                # re_s = re.search(r"\(({.*})\)", scripts[-1].text)
-                html_text = json.loads(re_s.group(1))["html"]
-                parse = etree.HTML(html_text)
-                user_name = parse.xpath("//div[contains(@class,'WB_info')]/a/text()")[0]
-                if user_name:
-                    break
-                time.sleep(1)
-            except:
-                if count % 5 == 0:
-                    print("获取ident已经失败 {} 次，如失败次数过多请检查网络，或尝试更新cookies".format(count))
-                    time.sleep(3)
+            first_part_response = self.session_get(base_url)
+            parse = etree.HTML(first_part_response.content.decode("utf-8"))
+            scripts = parse.xpath("//script")
+            for script in scripts[::-1]:
+                try:
+                    re_s = re.search(r"\(({.*})\)", script.text.replace("\n", ""))
+                    html_text = json.loads(re_s.group(1))["html"]
+                    parse = etree.HTML(html_text)
+                    user_name = parse.xpath("//div[contains(@class,'WB_info')]/a/text()")
+                    if user_name:
+                        user_name = user_name[0]
+                        user_ident = "{}[{}]".format(user_name, user_id)
+                        print("成功获取到ideng")
+                        return user_ident
+                except:
+                    pass
+            if count % 5 == 0:
+                print("获取ident已经失败 {} 次，如失败次数过多请检查网络，或尝试更新cookies".format(count))
+                time.sleep(3)
 
-        user_ident = "{}[{}]".format(user_name, user_id)
-        print("成功获取到ideng")
-        return user_ident
+
 
     def get_page_num(self):
         """
