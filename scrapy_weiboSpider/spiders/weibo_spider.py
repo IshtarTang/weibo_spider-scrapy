@@ -121,9 +121,11 @@ class WeiboSpiderSpider(scrapy.Spider):
         for i in range(0, 3):
             try:
                 response = self.session.get(url, timeout=30)
+
                 break
             except:
-                continue
+                traceback.print_exc()
+                raise
         return response
 
     def start_requests(self):
