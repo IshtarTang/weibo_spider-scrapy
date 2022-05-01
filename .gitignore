@@ -5,3 +5,5 @@
 get_test.py
 tool_filter.py
 requirement_backup.txt
+.idea
+scrapy_weiboSpider/spiders/backup

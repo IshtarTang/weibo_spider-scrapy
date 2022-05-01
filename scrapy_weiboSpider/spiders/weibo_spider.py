@@ -15,7 +15,7 @@ import msvcrt
 import logging
 from scrapy_weiboSpider.items import weiboItem, commentItem
 from scrapy_weiboSpider.settings import get_key_word
-
+from scrapy_weiboSpider.config_path_file import config_path
 
 def spe_log(str1, file_name="test_code.log"):
     path = "test_file"
@@ -59,7 +59,7 @@ class WeiboSpiderSpider(scrapy.Spider):
     name = 'wb_spider'
     allowed_domains = ['weibo.com']
     start_urls = ['http://weibo.com/']
-    config = read_json("./file/config.json", coding="gbk")
+    config = read_json(config_path, coding="gbk")
     user_ident = ""
     test_list = []
 
@@ -361,13 +361,19 @@ class WeiboSpiderSpider(scrapy.Spider):
         scripts = response.xpath("/html/script").extract()
         weibo_parse = None
         for script in scripts:
-            if "feed_list_content" in script and "ouid={}".format(user_id) in script:
-                # 提取出值中的json
-                tmp_json = json.loads(re.search(r"\(({.*})\)", script).group(1), encoding="utf-8")
-                # 获取html。符号编码不知道哪出问题了，手动替换
-                weibo_html = tmp_json["html"].replace("&lt;", "<").replace("&gt;", ">")
-                weibo_parse = etree.HTML(weibo_html)
-                break
+            try:
+
+                if "feed_list_content" in script and "ouid={}".format(user_id) in script:
+                    # 提取出值中的json
+                    tmp_str = re.search(r"\(({.*})\)", script).group(1)
+                    logging.info(tmp_str)
+                    tmp_json = json.loads(tmp_str, encoding="utf-8")
+                    # 获取html。符号编码不知道哪出问题了，手动替换
+                    weibo_html = tmp_json["html"].replace("&lt;", "<").replace("&gt;", ">")
+                    weibo_parse = etree.HTML(weibo_html)
+                    break
+            except:
+                pass
         meta = response.meta
         # 没获取到
         if not weibo_parse:
@@ -847,12 +853,13 @@ class WeiboSpiderSpider(scrapy.Spider):
         """
         user_id = self.config["personal_homepage_config"]["user_id"]
         base_url = "https://weibo.com/u/{}?page=1&is_all=1".format(user_id)
+        print(base_url)
         count = 0
         user_name = ""
         while True:
             count += 1
             first_part_response = self.session_get(base_url)
-            parse = etree.HTML(first_part_response.content.decode("utf-8"))
+            parse = etree.HTML(first_part_response.text)
             scripts = parse.xpath("//script")
             for script in scripts[::-1]:
                 try:
@@ -871,11 +878,8 @@ class WeiboSpiderSpider(scrapy.Spider):
                 print("获取ident已经失败 {} 次，如失败次数过多请检查网络，或尝试更新cookies".format(count))
                 time.sleep(3)
 
-
-
     def get_page_num(self):
         """
-
         :return: 该用户微博总页数
         """
         user_id = self.config["personal_homepage_config"]["user_id"]
@@ -1006,7 +1010,7 @@ class WeiboSpiderSpider(scrapy.Spider):
 
         """
         result = True
-        config = read_json("./file/config.json")
+        config = read_json(config_path)
         start_time = config["personal_homepage_config"]["time_range"]["start_time"]
         stop_time = config["personal_homepage_config"]["time_range"]["stop_time"]
 
@@ -1107,9 +1111,8 @@ class WeiboSpiderSpider(scrapy.Spider):
         id_search = re.search(r"weibo.com/(\d+)/.*", url)
         user_id = id_search.group(1)
         while True:
+            time.sleep(1)
             count += 1
-            if count % 2 == 0:
-                time.sleep(3)
             if count == 6:
                 print("该条无法获取，请确认该条微博是否可见，链接 {}".format(url))
                 return
@@ -1121,12 +1124,18 @@ class WeiboSpiderSpider(scrapy.Spider):
             for script in scripts:
                 script_str = etree.tostring(script, encoding="utf-8").decode("utf-8")
                 if "feed_list_content" in script_str and "ouid={}".format(user_id) in script_str:
+                    with open("wb_test.html", "a", encoding="utf-8") as op:
+                        op.write(script_str)
+                        op.write("\n\n======\n\n")
                     # 提取出值中的json
-                    tmp_json = json.loads(re.search(r"\(({.*})\)", script_str).group(1), encoding="utf-8")
-                    # 获取html。符号编码不知道哪出问题了，手动替换
-                    weibo_html = tmp_json["html"].replace("&lt;", "<").replace("&gt;", ">")
-                    weibo_parse = etree.HTML(weibo_html)
-                    break
+                    try:
+                        tmp_json = json.loads(re.search(r"\(({.*})\)", script_str).group(1), encoding="utf-8")
+                        # 获取html。符号编码手动替换
+                        weibo_html = tmp_json["html"].replace("&lt;", "<").replace("&gt;", ">")
+                        weibo_parse = etree.HTML(weibo_html)
+                        break
+                    except:
+                        continue
 
             try:
                 # 成功了就退出for循环

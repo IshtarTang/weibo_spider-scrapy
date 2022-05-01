@@ -12,7 +12,7 @@
 
 #### 配置文件
 
-配置文件是file/config.json
+默认配置文件是configs/config.json
 
 蓝框内为基础配置，一个黄框是一种爬取模式的配置
 
@@ -73,6 +73,12 @@
 **评论监控配置**
 
 对一条/多条微博的评论进行实时爬取更新，还没写
+
+**多个配置文件**
+
+可以在configs下创建多个配置文件，在`scrapy_weiboSpider/config_path_file.py`中指定启用的配置文件。
+
+
 
 
 

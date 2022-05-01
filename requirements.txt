@@ -1,5 +1,0 @@
-Scrapy==1.8.0
-Scrapy-Redis==0.6.8
-requests==2.19.1
-lxml==4.4.1
-json5==0.8.5

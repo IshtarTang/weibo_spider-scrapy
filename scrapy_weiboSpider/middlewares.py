@@ -7,7 +7,7 @@
 
 from scrapy import signals
 import json
-
+from scrapy_weiboSpider.config_path_file import config_path
 
 class ScrapyWeibospiderSpiderMiddleware(object):
     # Not all methods need to be defined. If a method is not defined,
@@ -78,7 +78,7 @@ class ScrapyWeibospiderDownloaderMiddleware(object):
         # - or return a Request object
         # - or raise IgnoreRequest: process_exception() methods of
         #   installed downloader middleware will be called
-        config = json.load(open("./file/config.json", encoding="utf-8"), encoding="utf-8")
+        config = json.load(open(config_path, encoding="utf-8"), encoding="utf-8")
         cookies = config["cookies_str"]
         from scrapy_weiboSpider.spiders.weibo_spider import CookiestoDic
 

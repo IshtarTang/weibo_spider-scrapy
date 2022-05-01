@@ -9,7 +9,7 @@ from scrapy_weiboSpider.settings import get_key_word
 import json
 import os
 import logging
-
+from scrapy_weiboSpider.config_path_file import config_path
 
 def log_and_print(text):
     logging.info(text)
@@ -20,7 +20,7 @@ class ScrapyWeibospiderPipeline(object):
     def open_spider(self, spider):
         print("文件准备")
         self.base_path = "./file"
-        self.config = self.read_json(self.base_path + "/config.json", coding="gbk")
+        self.config = self.read_json(config_path, coding="gbk")
         self.filedir = self.get_get_filepath()
         self.pre_file_path = self.filedir + "/" + "prefile"
         # 过程文件路径

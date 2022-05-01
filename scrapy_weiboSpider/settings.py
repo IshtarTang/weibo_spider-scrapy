@@ -4,6 +4,7 @@ import time
 import re
 import os
 import msvcrt
+from scrapy_weiboSpider.config_path_file import config_path
 
 
 def get_log_path(id=0):
@@ -80,7 +81,7 @@ def check_config():
     :return:
     """
     print("检查配置文件")
-    config_str = open("./file/config.json", "r", encoding="gbk").read()
+    config_str = open(config_path, "r", encoding="gbk").read()
     config = json.loads(config_str, encoding="utf-8")
     # 个人主页模式
     if config["mode"] == 1:
@@ -154,7 +155,7 @@ def get_key_word(user_Chinese_symbols=True):
     :param user_Chinese_symbols:将时间设置中英文":"符替换为中文"："
     :return:
     """
-    config_str = open("./file/config.json", "r", encoding="gbk").read()
+    config_str = open(config_path, "r", encoding="gbk").read()
     config = json.loads(config_str, encoding="utf-8")
     key_word = ""
     if config["mode"] == 1:
