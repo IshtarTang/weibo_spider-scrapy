@@ -1,0 +1,10 @@
+lxml
+parsel
+w3lib
+twisted
+cryptography
+pyOpenSSL
+requests==2.27.1
+Scrapy== 2.6.1
+Scrapy-Redis==0.6.8
+json5
