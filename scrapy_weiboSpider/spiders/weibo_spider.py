@@ -512,10 +512,16 @@ class WeiboSpiderSpider(scrapy.Spider):
         # 正文
         # 文章长时会有收起的部分，需要另外发送请求
         is_content_long = parse.xpath(".//a[contains(@class,'WB_text_opt')]")
-        # 如果有折叠的部分
+        # 如果有折叠的部分，把url塞到解析单条微博的方法去解析微博正文页，这里不继续解析
         if is_content_long:
-            content_parse = self.rquests_get_weibo_div(weibo_url)
-            content_ele = content_parse.xpath(".//div[@node-type='feed_list_content']//text()")
+            meta = {"t_weibo_div": None, "t_bid": None, "wb_type": "o_wb", "count": 1,
+                     "get_all_comment": get_all_comment, "get_all_r_comment": get_all_r_comment,
+                     "handle_httpstatus_list": [302]}
+            yield Request(weibo_url, callback=self.get_single_wb, cookies=self.cookies, meta=meta,
+                          errback=self.deal_err, dont_filter=True)
+            # content_parse = self.rquests_get_weibo_div(weibo_url)
+            # content_ele = content_parse.xpath(".//div[@node-type='feed_list_content']//text()")
+            return
         else:
             content_ele = parse.xpath(".//div[@node-type='feed_list_content']//text()")
         # 取出0的首尾空格
@@ -1104,51 +1110,51 @@ class WeiboSpiderSpider(scrapy.Spider):
         else:
             return result > 0
 
-    def rquests_get_weibo_div(self, url):
-        # 对单条微博的链接发起请求，解析出div[@tbinfo]
-        # 链接格式为 https://weibo.com/xxxxxxx/xxxxxxx 例：https://weibo.com/5762457113/K058KnPJb
-        # 有些需要即时返回结果的会调这个方法
-        weibo_div = ""
-        count = 0
-        id_search = re.search(r"weibo.com/(\d+)/.*", url)
-        user_id = id_search.group(1)
-        while True:
-            time.sleep(1)
-            count += 1
-            if count == 6:
-                print("该条无法获取，请确认该条微博是否可见，链接 {}".format(url))
-                return
-            text = self.session_get(url).text
-            weibo_page_parse = etree.HTML(text)
-            scripts = weibo_page_parse.xpath("/html/script")
-            weibo_parse = ""
-            # 找到正文内容的script
-            for script in scripts:
-                script_str = etree.tostring(script, encoding="utf-8").decode("utf-8")
-                if "feed_list_content" in script_str and "ouid={}".format(user_id) in script_str:
-                    # with open("wb_test.html", "a", encoding="utf-8") as op:
-                    #     op.write(script_str)
-                    #     op.write("\n\n======\n\n")
-                    #     print()
-                    # 提取出值中的json
-                    try:
-                        # tmp_json = json.loads(re.search(r"\(({.*?feed_list_content.*?ouid="+str(user_id)+"})\)", script_str).group(1), encoding="utf-8")
-                        tmp_json = json.loads(
-                            re.search(r"\(({.*?feed_list_content.*?ouid=" + str(user_id) + ".*?})\)", script_str).group(
-                                1), encoding="utf-8")
-                        # 获取html。符号编码手动替换
-                        weibo_html = tmp_json["html"].replace("&lt;", "<").replace("&gt;", ">")
-                        weibo_parse = etree.HTML(weibo_html)
-                        break
-                    except:
-                        logging.warning(traceback.format_exc())
-
-            try:
-                # 成功了就退出for循环
-                weibo_div = weibo_parse.xpath("//div[@tbinfo]")[0]
-            except:
-                # 失败就下一个while
-                continue
-
-            break
-        return weibo_div
+    # def rquests_get_weibo_div(self, url):
+    #     # 对单条微博的链接发起请求，解析出div[@tbinfo]
+    #     # 链接格式为 https://weibo.com/xxxxxxx/xxxxxxx 例：https://weibo.com/5762457113/K058KnPJb
+    #     # 有些需要即时返回结果的会调这个方法
+    #     weibo_div = ""
+    #     count = 0
+    #     id_search = re.search(r"weibo.com/(\d+)/.*", url)
+    #     user_id = id_search.group(1)
+    #     while True:
+    #         time.sleep(1)
+    #         count += 1
+    #         if count == 6:
+    #             print("该条无法获取，请确认该条微博是否可见，链接 {}".format(url))
+    #             return
+    #         text = self.session_get(url).text
+    #         weibo_page_parse = etree.HTML(text)
+    #         scripts = weibo_page_parse.xpath("/html/script")
+    #         weibo_parse = ""
+    #         # 找到正文内容的script
+    #         for script in scripts:
+    #             script_str = etree.tostring(script, encoding="utf-8").decode("utf-8")
+    #             if "feed_list_content" in script_str and "ouid={}".format(user_id) in script_str:
+    #                 # with open("wb_test.html", "a", encoding="utf-8") as op:
+    #                 #     op.write(script_str)
+    #                 #     op.write("\n\n======\n\n")
+    #                 #     print()
+    #                 # 提取出值中的json
+    #                 try:
+    #                     # tmp_json = json.loads(re.search(r"\(({.*?feed_list_content.*?ouid="+str(user_id)+"})\)", script_str).group(1), encoding="utf-8")
+    #                     tmp_json = json.loads(
+    #                         re.search(r"\(({.*?feed_list_content.*?ouid=" + str(user_id) + ".*?})\)", script_str).group(
+    #                             1), encoding="utf-8")
+    #                     # 获取html。符号编码手动替换
+    #                     weibo_html = tmp_json["html"].replace("&lt;", "<").replace("&gt;", ">")
+    #                     weibo_parse = etree.HTML(weibo_html)
+    #                     break
+    #                 except:
+    #                     logging.warning(traceback.format_exc())
+    #
+    #         try:
+    #             # 成功了就退出for循环
+    #             weibo_div = weibo_parse.xpath("//div[@tbinfo]")[0]
+    #         except:
+    #             # 失败就下一个while
+    #             continue
+    #
+    #         break
+    #     return weibo_div
