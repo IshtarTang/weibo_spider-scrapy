@@ -244,7 +244,7 @@ class WeiboSpiderSpider(scrapy.Spider):
             "//div[contains(@node-type,'comment_list')]/div[@comment_id]")
 
         meta = response.meta
-
+        meta["comm_count"] += 15
         # 类型为根评论，且没获取到根评论，重新获取
         if not root_comm_divs:
             if meta["count"] > 5:
@@ -273,7 +273,9 @@ class WeiboSpiderSpider(scrapy.Spider):
                 # meta内容相同，count重置为1即可
                 # {"get_all_comment": get_all_comment, "comm_type": "root", "superior_id": bid, "count": 1}
                 meta["count"] = 1
-                yield Request(next_url, self.get_root_comment, meta=meta, errback=self.deal_err)
+                print(meta["superior_id"], meta['comm_count'])
+                if meta['comm_count'] < 45:
+                    yield Request(next_url, self.get_root_comment, meta=meta, errback=self.deal_err)
 
         # 循环每个div
 
@@ -336,8 +338,8 @@ class WeiboSpiderSpider(scrapy.Spider):
             sub_child_comment_url = "https://weibo.com/aj/v6/comment/big?ajwvr=6&{}&from=singleWeiBo&__rnd={}".format(
                 sub_child_comment_url_part[0], int(time.time() * 1000))
 
-            yield Request(sub_child_comment_url, self.get_child_comment,
-                          cookies=self.cookies, meta={"superior_id": root_comm_id, "count": 1}, errback=self.deal_err)
+            # yield Request(sub_child_comment_url, self.get_child_comment,
+            #               cookies=self.cookies, meta={"superior_id": root_comm_id, "count": 1}, errback=self.deal_err)
 
     def get_single_wb(self, response):
         """
@@ -470,6 +472,27 @@ class WeiboSpiderSpider(scrapy.Spider):
                 is_original = 1
             r_href = ""
 
+        # 正文
+        # 文章长时会有收起的部分，需要另外发送请求
+        is_content_long = parse.xpath(
+            ".//div[contains(@class,'WB_feed_detail')]/div/div[contains(@class,'WB_text')]/a[contains(@class,'WB_text_opt')]")
+        # 如果有折叠的部分，把url塞到解析单条微博的方法去解析微博正文页，这里不继续解析
+        if is_content_long:
+            meta = {"t_weibo_div": None, "t_bid": None, "wb_type": "o_wb", "count": 1,
+                    "get_all_comment": get_all_comment, "get_all_r_comment": get_all_r_comment,
+                    "handle_httpstatus_list": [302]}
+            yield Request(weibo_url, callback=self.get_single_wb, cookies=self.cookies, meta=meta,
+                          errback=self.deal_err, dont_filter=True)
+            return
+        else:
+            content_ele = parse.xpath(".//div[@node-type='feed_list_content']//text()")
+        # 取出0的首尾空格
+        content_ele[0] = content_ele[0].strip()
+        content = "\n".join(content_ele).replace("\u200b", "").replace("//\n@", "//@").replace("\n:", ":").replace(
+            "\xa0", "").replace("\xa1", "")
+        # 有链接时会多出换行，可以在xpath处理但是太麻烦，所以直接replace
+        content = content.replace("\nO\n网页链接", " O 网页链接")
+
         # 源微博
         r_weibo = {}  # 先占个位，Pipeline里再写进去
         # 存在源微博，且源微博可见，
@@ -508,28 +531,6 @@ class WeiboSpiderSpider(scrapy.Spider):
             # 用户id，微博为转发时格式为 ‘ouid=6123910030&rouid=5992829552’
         user_id_ele = parse.xpath(".//@tbinfo")[0].split("&")[0]
         user_id = re.search(r"ouid=(\d+)", user_id_ele).group(1)
-
-        # 正文
-        # 文章长时会有收起的部分，需要另外发送请求
-        is_content_long = parse.xpath(".//a[contains(@class,'WB_text_opt')]")
-        # 如果有折叠的部分，把url塞到解析单条微博的方法去解析微博正文页，这里不继续解析
-        if is_content_long:
-            meta = {"t_weibo_div": None, "t_bid": None, "wb_type": "o_wb", "count": 1,
-                     "get_all_comment": get_all_comment, "get_all_r_comment": get_all_r_comment,
-                     "handle_httpstatus_list": [302]}
-            yield Request(weibo_url, callback=self.get_single_wb, cookies=self.cookies, meta=meta,
-                          errback=self.deal_err, dont_filter=True)
-            # content_parse = self.rquests_get_weibo_div(weibo_url)
-            # content_ele = content_parse.xpath(".//div[@node-type='feed_list_content']//text()")
-            return
-        else:
-            content_ele = parse.xpath(".//div[@node-type='feed_list_content']//text()")
-        # 取出0的首尾空格
-        content_ele[0] = content_ele[0].strip()
-        content = "\n".join(content_ele).replace("\u200b", "").replace("//\n@", "//@").replace("\n:", ":").replace(
-            "\xa0", "").replace("\xa1", "")
-        # 有链接时会多出换行，可以在xpath处理但是太麻烦，所以直接replace
-        content = content.replace("\nO\n网页链接", " O 网页链接")
 
         # 外链，微博有的链接进行一次请求才能获取到真正的链接，有的需要从确认界面中获取
         parse_links = parse.xpath(".//div[@node-type='feed_list_content']//a[@href and @rel]/@href")
@@ -671,7 +672,8 @@ class WeiboSpiderSpider(scrapy.Spider):
 
             yield Request(first_comment_url, callback=self.get_root_comment, cookies=self.cookies,
                           meta={"get_all_comment": get_all_comment, "superior_id": part_url.split("?")[0],
-                                "count": 1, "wb_url": weibo_url}, dont_filter=True, errback=self.deal_err)
+                                "count": 1, "wb_url": weibo_url, "comm_count": 0}, dont_filter=True,
+                          errback=self.deal_err)
             # quick_log("{} - {}".format(1, first_comment_url))
 
         # 话题，@的用户，地址    不想写，以后可能会补上
