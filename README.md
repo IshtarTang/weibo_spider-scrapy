@@ -210,7 +210,7 @@ weibo.txt、rcomm.txt 和ccomm.txt是过程文件，weibo是微博信息，rcomm
 
 <br><br>
 
-如果有什么要讨论的，我的邮箱是ishtartang@163.com，发中文，之前有居然国人发英文给我，我自述文件里明明写的全是中文居然发英文给我，淦哦我英文也不好的
+有问题的话我的邮箱是ishtartang@163.com，如果要讨论，微信号`Ishtar_Tang`。
 
 <br>
 
