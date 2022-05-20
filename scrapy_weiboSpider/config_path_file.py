@@ -1,1 +1,1 @@
-config_path = "./configs/config.json"
+config_path = "./configs/I1_debug.json"

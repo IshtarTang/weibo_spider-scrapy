@@ -50,8 +50,7 @@ def request_fingerprint(request, include_headers=None):
     wb_match = re.search("weibo.com(/+\d+/\w+)\?*", url1)
     if wb_match:
         fingerprint = wb_match.group(1)
-
-        logging.info("fig {}".format(fingerprint))
+        # logging.info("fig {}".format(fingerprint))
         return fingerprint
 
     if include_headers:
@@ -72,5 +71,4 @@ def request_fingerprint(request, include_headers=None):
         cache[include_headers] = fp.hexdigest()
 
     fingerprint = cache[include_headers]
-    logging.info("fig- {}".format(fingerprint))
     return fingerprint

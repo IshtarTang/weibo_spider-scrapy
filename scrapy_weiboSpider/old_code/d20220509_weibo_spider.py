@@ -52,56 +52,62 @@ def read_json(file_name, coding="utf-8"):
     return content
 
 
-def write_json(file, filename="test.json", coding="utf-8"):
+def write_json(file, filename="testcat.json", coding="utf-8"):
     open(filename, "w", encoding=coding).write(json.dumps(file, ensure_ascii=False, indent=4))
 
 
 class WeiboSpiderSpider(scrapy.Spider):
-    name = 'wb_spider'
+    name = 'd20220509'
     allowed_domains = ['weibo.com']
     start_urls = ['http://weibo.com/']
-    config = read_json(config_path, coding="gbk")
-    user_ident = ""
-    test_list = []
 
-    key_word = get_key_word()
-    print("本次运行的文件key为 {}".format(key_word))
-    if os.path.exists("./file" + "/" + key_word + "/wb_result.json"):
-        print("目标路径下已有上次运行产生的文件，本次运行爬取的微博会更新到文件中")
+    def start(self):
+        self.config = json.load(open(config_path, "r", encoding="utf-8"))
+        self.key_word = get_key_word(self.config)
+        print("本次运行的文件key为 {}".format(self.key_word))
+        if os.path.exists("./file" + "/" + self.key_word + "/wb_result.json"):
+            print("目标路径下已有上次运行产生的文件，本次运行爬取的微博会更新到文件中")
 
-    pre_save_file_path1 = "./file" + "/" + key_word + "/prefile/simple_wb_info.json"
-    pre_save_file_path2 = "./file" + "/" + key_word + "/prefile/weibo.txt"
-    fail_url_filepath = "./file" + "/" + key_word + "fail_url.txt"
+        pre_save_file_path1 = "./file" + "/" + self.key_word + "/prefile/simple_wb_info.json"
+        pre_save_file_path2 = "./file" + "/" + self.key_word + "/prefile/weibo.txt"
+        pre_save_file_path3 = "./file" + "/" + self.key_word + "/wb_result.json"
+        fail_url_filepath = "./file" + "/" + self.key_word + "fail_url.txt"
 
-    headers = {
-        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.141 Safari/537.36"}
-    cookies = CookiestoDic(config["cookies_str"])
-    session_start_time = time.time()
-    session = requests.session()
-    session.headers = headers
-    session.cookies.update(cookies)
-    saved_key = []
+        # 制造requests session
+        self.headers = {
+            "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.141 Safari/537.36"}
+        self.cookies = CookiestoDic(self.config["cookies_str"])
+        self.session_start_time = time.time()
+        self.session = requests.session()
+        self.session.headers = self.headers
+        self.session.cookies.update(self.cookies)
+        self.saved_key = []
+        # 读出预写文件，拿出已经爬过的bid
+        if os.path.exists(pre_save_file_path1):
+            saved_wb1 = read_json(pre_save_file_path1)
+            self.saved_key += list(saved_wb1.keys())
 
-    # 读出两个预写文件，拿出已经爬过的bid
-    if os.path.exists(pre_save_file_path1):
-        saved_wb1 = read_json(pre_save_file_path1)
-        saved_key = list(saved_wb1.keys())
+        if os.path.exists(pre_save_file_path2):
+            file1 = open(pre_save_file_path2, "r", encoding="utf-8").read().strip()
+            tmp_str = "[" + ",".join(file1.split("\n")) + "]"
+            file = json.loads(tmp_str, encoding="utf-8")
+            for x in file:
+                self.saved_key.append(x["bid"])
+        if os.path.exists(pre_save_file_path3):
+            saved_wbs = json.load(open(pre_save_file_path3, "r", encoding="utf-8"))
+            for wb in saved_wbs:
+                self.saved_key.append(wb["bid"])
+        else:
+            print("no")
+        self.saved_key = list(set(self.saved_key))
+        if self.saved_key:
+            print("读取到上次运行保存的微博{}条".format(len(self.saved_key)))
 
-    if os.path.exists(pre_save_file_path2):
-        file1 = open(pre_save_file_path2, "r", encoding="utf-8").read().strip()
-        tmp_str = "[" + ",".join(file1.split("\n")) + "]"
-        file = json.loads(tmp_str, encoding="utf-8")
-        for x in file:
-            saved_key.append(x["bid"])
-    saved_key = list(set(saved_key))
-    if saved_key:
-        print("读取到上次运行保存的微博{}条".format(len(saved_key)))
-
-    print("请确认redis已启动，按任意键继续，或Esc以退出")
-    x = ord(msvcrt.getch())
-    if x == 27:
-        print("程序退出")
-        quit()
+        print("请确认redis已启动，按任意键继续，或Esc以退出")
+        x = ord(msvcrt.getch())
+        if x == 27:
+            print("程序退出")
+            quit()
 
     def session_get(self, url):
         """
@@ -120,16 +126,12 @@ class WeiboSpiderSpider(scrapy.Spider):
             logging.info("session更新，更新时间{}".format(time.time()))
         response = ""
         for i in range(0, 3):
-            try:
-                response = self.session.get(url, timeout=30)
-
-                break
-            except:
-                traceback.print_exc()
-                raise
+            response = self.session.get(url, timeout=30)
+            break
         return response
 
     def start_requests(self):
+        self.start()
         # 网络测试
         ident = self.get_user_ident()
         print(ident)
@@ -140,8 +142,8 @@ class WeiboSpiderSpider(scrapy.Spider):
         sub_part_url_base = "https://weibo.com/p/aj/v6/mblog/mbloglist?ajwvr=6&domain=100505&visible=0&is_all=1" \
                             "&profile_ftype=1&page={}&pagebar={}&pl_name=Pl_Official_MyProfileFeed__20" \
                             "&id=100505{}&script_uri=/{}/profile&feed_type=0&pre_page={}&domain_op=100505&__rnd={} "
-        # 页数循环
         user_id = self.config["personal_homepage_config"]["user_id"]
+        # 页数循环
         for page in range(1, page_num + 1):
             url1 = first_part_url_base.format(user_id, page)
             url2 = sub_part_url_base.format(page, 0, user_id, user_id, page, int(time.time() * 1000))
@@ -274,8 +276,7 @@ class WeiboSpiderSpider(scrapy.Spider):
                 # {"get_all_comment": get_all_comment, "comm_type": "root", "superior_id": bid, "count": 1}
                 meta["count"] = 1
                 print(meta["superior_id"], meta['comm_count'])
-                if meta['comm_count'] < 45:
-                    yield Request(next_url, self.get_root_comment, meta=meta, errback=self.deal_err)
+                yield Request(next_url, self.get_root_comment, meta=meta, errback=self.deal_err)
 
         # 循环每个div
 
@@ -338,8 +339,8 @@ class WeiboSpiderSpider(scrapy.Spider):
             sub_child_comment_url = "https://weibo.com/aj/v6/comment/big?ajwvr=6&{}&from=singleWeiBo&__rnd={}".format(
                 sub_child_comment_url_part[0], int(time.time() * 1000))
 
-            # yield Request(sub_child_comment_url, self.get_child_comment,
-            #               cookies=self.cookies, meta={"superior_id": root_comm_id, "count": 1}, errback=self.deal_err)
+            yield Request(sub_child_comment_url, self.get_child_comment,
+                          cookies=self.cookies, meta={"superior_id": root_comm_id, "count": 1}, errback=self.deal_err)
 
     def get_single_wb(self, response):
         """
@@ -423,7 +424,6 @@ class WeiboSpiderSpider(scrapy.Spider):
         # bid
         bid_ele = parse.xpath(".//a[@node-type='feed_list_item_date']/@href")
         bid = re.search("/\d+/(\w+)\?", bid_ele[0]).group(1)
-        logging.info("bid - {}".format(bid))
 
         ident = bid.split("/")[0]
 
@@ -828,6 +828,8 @@ class WeiboSpiderSpider(scrapy.Spider):
         :param comment_time:
         :return:
         """
+        if "来自" in comment_time:
+            comment_time = comment_time.split("来自")[0]
         if "今天" in comment_time:
             patten = "%Y-%m-%d"
             today_time = time.localtime(time.time())
@@ -929,7 +931,10 @@ class WeiboSpiderSpider(scrapy.Spider):
             # these exceptions come from HttpError spider middleware
             # you can get the non-200 response
             response = failure.value.response
-            self.logger.error('HttpError on %s', response.url)
+            self.logger.error('%s HttpError on %s', response.status, response.url)
+
+            if not response.status >= 500:
+                yield failure.request
 
         elif failure.check(DNSLookupError):
             # this is the original request
@@ -939,8 +944,7 @@ class WeiboSpiderSpider(scrapy.Spider):
         elif failure.check(TimeoutError, TCPTimedOutError):
             request = failure.request
             self.logger.error('TimeoutError on %s', request.url)
-
-        yield failure.request
+            yield failure.request
 
     def t_is_page_in_timerange(self, user_id, page):
         """
@@ -1079,7 +1083,7 @@ class WeiboSpiderSpider(scrapy.Spider):
             return False
         return True
 
-    def t_is_a_early_than_b(self, a, b, can_equal):
+    def t_is_a_early_than_b(a, b, can_equal):
         """
         时间比较
         :param a: 毫秒时间戳(13位)或 "%Y-%m-%d %H:%M"格式的字符串

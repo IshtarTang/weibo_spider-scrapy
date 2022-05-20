@@ -11,6 +11,7 @@ import os
 import logging
 from scrapy_weiboSpider.config_path_file import config_path
 
+
 def log_and_print(text):
     logging.info(text)
     print(text)
@@ -20,7 +21,7 @@ class ScrapyWeibospiderPipeline(object):
     def open_spider(self, spider):
         print("文件准备")
         self.base_path = "./file"
-        self.config = self.read_json(config_path, coding="gbk")
+        self.config = json.load(open(config_path, "r", encoding="utf-8"))
         self.filedir = self.get_get_filepath()
         self.pre_file_path = self.filedir + "/" + "prefile"
         # 过程文件路径
@@ -195,6 +196,7 @@ class ScrapyWeibospiderPipeline(object):
 
         # 微博写入到文件
         self.write_json(wb_list, self.wb_result_filepaht)
+        logging.info("整合完成")
 
         # 清空临时文件
         input1 = input("\n文件保存完毕，是否清空临时文件（yes/no）")
@@ -209,7 +211,7 @@ class ScrapyWeibospiderPipeline(object):
         log_and_print("保存结束，文件保存于{}\n程序正常退出".format(self.filedir))
 
     def get_get_filepath(self):
-        key_word = get_key_word()
+        key_word = get_key_word(self.config)
         path = self.base_path + "/" + key_word
         log_and_print("文件路径 {}".format(path))
         return path
