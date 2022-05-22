@@ -131,7 +131,7 @@ def check_config(config):
 
     # 模式编号错误
     else:
-        mode_id = config["mode"]
+        mode_id = config["id"]
         print("没有序号为{}的模式".format(mode_id))
         return False
 
@@ -145,7 +145,7 @@ def get_key_word(config, user_Chinese_symbols=True):
     :return:
     """
     key_word = ""
-    if config["mode"] == 1:
+    if config["id"] == 1:
         key_word = ""
         if config["user_name"]:
             key_word += "[" + config["user_name"] + "]"
@@ -167,11 +167,11 @@ def get_key_word(config, user_Chinese_symbols=True):
             key_word += "[{} - {}]".format(start_time, stop_time)
 
 
-    elif config["mode"] == 2:
+    elif config["id"] == 2:
         config = config["search_config"]
         key_word = "wb_2_{}".format(config["search_code"])
 
-    elif config["mode"] == 3:
+    elif config["id"] == 3:
         config = config["single_weibo_with_comment_real-time_updates_config"]
         re_tid = re.search(r"weibo.com/(.*?/.*?)\?", config["weibo_url"])
         key_word = "wb_3_{}".format(re_tid.group(1))
