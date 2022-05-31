@@ -118,7 +118,7 @@
 
 按上面的修改配置文件
 
-项目路径下输入 `redis crawl wb_spider`
+项目路径下输入 `scrapy crawl wb_spider`
 
 ![1628616482050](%E7%AC%94%E8%AE%B0%E5%9B%BE/README/1628616482050.png)
 
