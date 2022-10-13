@@ -4,6 +4,7 @@ import os
 import json
 import time
 import sys
+import math
 from lxml.html import etree
 import traceback
 import re
@@ -113,7 +114,8 @@ class WeiboSpiderSpider(scrapy.Spider):
 
     def session_get(self, url):
         """
-        一个requests的session，在解析部分有需要立刻返回结果的请求
+        使用requests 的 session去get
+        在解析部分有需要立刻返回结果的请求
         session30分钟会过期，所有如果跟上次调用session的时间间隔超过10分钟就更新session
         :param url:
         :return:
@@ -130,26 +132,27 @@ class WeiboSpiderSpider(scrapy.Spider):
         for i in range(0, 3):
             response = self.session.get(url, timeout=30)
             break
+        logging.debug("requests url {} 成功".format(url))
         return response
 
     def start_requests(self):
         self.start()
-
+        print("-----")
         # 网络测试
-        ident = self.get_user_ident()
+        ident, page_num = self.get_ident_and_page_num()
         print(ident)
         # 获取页数
-        page_num = self.get_page_num()
-        # 第一部分和后两部分的链接不同
+        # page_num = self.get_page_num()
+        # 第一部分和后两部分的链接不同，分两个连接
         first_part_url_base = "https://weibo.com/u/{}?page={}&is_all=1"
         sub_part_url_base = "https://weibo.com/p/aj/v6/mblog/mbloglist?ajwvr=6&domain=100505&visible=0&is_all=1" \
                             "&profile_ftype=1&page={}&pagebar={}&pl_name=Pl_Official_MyProfileFeed__20" \
                             "&id=100505{}&script_uri=/{}/profile&feed_type=0&pre_page={}&domain_op=100505&__rnd={} "
         user_id = self.config["user_id"]
 
-        # 页数循环
+        # 正常的页数循环
         page_range = range(1, page_num + 1)
-        # 调试项，指定页数，key不会变
+        # 调试项，强行指定页数，key不会变
         if self.config.get("debug", {}).get("page_range", 0):
             tmp_str = self.config["debug"]["page_range"]
             page_range = range(int(tmp_str.split("-")[0]), int(tmp_str.split("-")[1]) + 1)
@@ -190,6 +193,7 @@ class WeiboSpiderSpider(scrapy.Spider):
                           errback=self.deal_err, dont_filter=True)
 
     def parse_home_page(self, response):
+
         meta = response.meta
         # part1 的div需要从一大堆script里面找，有些长所以单独写了个方法， part2和part3可以直接parse
         if response.meta["part"] == 1:
@@ -211,6 +215,7 @@ class WeiboSpiderSpider(scrapy.Spider):
                 return
             yield Request(response.url, self.parse_home_page, cookies=self.cookies, meta=meta, dont_filter=True,
                           errback=self.deal_err)
+
             return
 
         # 每条微博是一个div
@@ -298,7 +303,7 @@ class WeiboSpiderSpider(scrapy.Spider):
                         sub_child_comment_url_part[0], int(time.time() * 1000))
                     yield Request(sub_child_comment_url, self.get_child_comment, cookies=self.cookies,
                                   meta={"superior_id": root_comm_id, "count": 1, "comm_config": meta["comm_config"],
-                                        "ccomm_cuont": len(child_comment_divs)}, errback=self.deal_err)
+                                        "ccomm_count": len(child_comment_divs)}, errback=self.deal_err)
 
         # 如果未满足要求的评论数，尝试翻页
         if meta["rcomm_count"] < meta["comm_config"]["wb_rcomm"]:
@@ -316,6 +321,7 @@ class WeiboSpiderSpider(scrapy.Spider):
                     format(next_url_part[0], int(time.time() * 1000))
                 # rcomm_count在前面加过，count重置为1，其他内容相同
                 meta["count"] = 1
+
                 yield Request(next_url, self.get_root_comment, meta=meta, errback=self.deal_err)
 
     def get_child_comment(self, response):
@@ -347,14 +353,14 @@ class WeiboSpiderSpider(scrapy.Spider):
             yield comm_item
 
         try:
-            meta["ccomm_cuont"] += len(child_comment_divs)
+            meta["ccomm_count"] += len(child_comment_divs)
         except:
             logging.warning("meta_count无 {} ".format(meta))
-        logging.info("{} 获取到 rcomm {} 条，总计 {} 条".format(root_comm_id, len(child_comment_divs), meta["ccomm_cuont"]))
-        print("{} 获取到 rcomm {} 条，总计 {} 条".format(root_comm_id, len(child_comment_divs), meta["ccomm_cuont"]))
+        logging.info("{} 获取到 rcomm {} 条，总计 {} 条".format(root_comm_id, len(child_comment_divs), meta["ccomm_count"]))
+        print("{} 获取到 rcomm {} 条，总计 {} 条".format(root_comm_id, len(child_comment_divs), meta["ccomm_count"]))
 
         # 如果未到达要求的子评论数量
-        if meta["ccomm_cuont"] < meta["comm_config"]["wb_ccomm"]:
+        if meta["ccomm_count"] < meta["comm_config"]["wb_ccomm"]:
             sub_child_comment_url_part = comment_parse.xpath(
                 "//a[@action-type='click_more_child_comment_big']/@action-data")
             if sub_child_comment_url_part:
@@ -537,6 +543,7 @@ class WeiboSpiderSpider(scrapy.Spider):
                 meta["handle_httpstatus_list"] = [302]
                 yield Request(r_url, callback=self.get_single_wb, cookies=self.cookies, meta=meta,
                               errback=self.deal_err, dont_filter=True)
+
             # 之前保存过
             else:
                 print("微博为转发微博，源微博 {} 已保存过，跳过解析".format(r_href))
@@ -659,8 +666,9 @@ class WeiboSpiderSpider(scrapy.Spider):
             video_search = re.search(r":(\d+)%3A(\w+):", video_url_info[0])
             try:
                 video_url = video_url_base.format(video_search.group(1), video_search.group(2))
-            except:
+            except AttributeError as e:
                 remark += "\t 该条微博带有直播视频"
+
         # 微博来源
         weibo_from_ele = parse.xpath(".//div[contains(@class,'WB_from')]//a[@action-type]/text()")
         if weibo_from_ele:
@@ -865,7 +873,7 @@ class WeiboSpiderSpider(scrapy.Spider):
             comment_time_result = comment_time
         return comment_time_result
 
-    def get_user_ident(self):
+    def get_ident_and_page_num(self):
         """
         获取用户标识 用户名[用户id]，检测下网络
         :return:
@@ -874,27 +882,53 @@ class WeiboSpiderSpider(scrapy.Spider):
         base_url = "https://weibo.com/u/{}?page=1&is_all=1".format(user_id)
         print(base_url)
         count = 0
+        flag = 0
         while True:
             count += 1
             first_part_response = self.session_get(base_url)
             parse = etree.HTML(first_part_response.text)
             scripts = parse.xpath("//script")
+            user_ident = ""
+            all_wb_num = 0
+            page_num = 0
             for script in scripts[::-1]:
+                # 从一堆script里提取html出来
                 try:
                     re_s = re.search(r"\(({.*})\)", script.text.replace("\n", ""))
                     html_text = json.loads(re_s.group(1))["html"]
-                    parse = etree.HTML(html_text)
-                    user_name = parse.xpath("//div[contains(@class,'WB_info')]/a/text()")
-                    if user_name:
-                        user_name = user_name[0]
+                    script_parse = etree.HTML(html_text)
+                    open("./test.html", "w", encoding="utf-8").write(html_text)
+                except KeyError as e:
+                    continue
+                if not user_ident:
+                    try:
+                        # 没搞到的话这里会直接抛报错
+                        user_name = script_parse.xpath("//div[contains(@class,'WB_info')]/a/text()")[0]
                         user_ident = "{}[{}]".format(user_name, user_id)
-                        print("成功获取到ideng")
-                        return user_ident
-                except:
-                    pass
+                        print("成功获取到iden {}".format(user_ident))
+                    except IndexError as e:
+                        """这是正常流程"""
+                        pass
+
+                if not all_wb_num:
+                    try:
+                        all_wb_num = script_parse.xpath(
+                            "//table[@class='tb_counter']//td[3]//a[@bpfilter='page_frame']/strong/text()")[0]
+                        all_wb_num = int(all_wb_num)
+                        print("总微博条数 {}".format(all_wb_num))
+                        page_num = math.ceil(all_wb_num / 45)
+                    except (IndexError,KeyError,AttributeError):
+                        """这也是正常流程"""
+                        continue
+                if page_num and user_ident:
+                    flag = 1
+                    break
+            if flag:
+                break
             if count % 5 == 0:
-                print("获取ident已经失败 {} 次，如失败次数过多请检查网络，或尝试更新cookies".format(count))
+                print("获取ident/page已经失败 {} 次，如失败次数过多请检查网络，或尝试更新cookies".format(count))
                 time.sleep(3)
+        return user_ident, page_num
 
     def get_page_num(self):
         """
@@ -911,14 +945,17 @@ class WeiboSpiderSpider(scrapy.Spider):
             count += 1
             response = self.session_get(url3)
             try:
+                open("test.html", "a", encoding="utf-8").write(response.content.decode("utf-8"))
                 html_text = json.loads(response.text)["data"]
                 parse = etree.HTML(html_text)
-                page = parse.xpath("//div[@class='W_pages']//a[@bpfilter='page']/@action-data")[0].split("countPage=")[
-                    1]
+                page = parse.xpath("//div[@class='W_pages']//a[@bpfilter='page']/@action-data")[0] \
+                    .split("countPage=")[1]
                 page = int(page)
                 if page:
                     break
-            except:
+            except Exception as e:
+                print(repr(e))
+
                 if count % 3 == 0:
                     print("获取页数失败 {} 次".format(count))
                     time.sleep(3)
@@ -983,7 +1020,7 @@ class WeiboSpiderSpider(scrapy.Spider):
                     print("重复5次失败，程序休眠30秒")
                     time.sleep(30)
                 if count % 9 == 0:
-                    print("获取page{} 最早微博时间失败8次，默认该页在时间范围内，在后续获取中进行处理".format(page))
+                    print("获取page {} 最早微博时间失败8次，默认该页在时间范围内，在后续获取中进行处理".format(page))
                     return result
                 p3_response = self.session_get(url3)
                 try:
@@ -1027,6 +1064,8 @@ class WeiboSpiderSpider(scrapy.Spider):
         """
         这段别再动了，要梳逻辑的话对着这个梳 https://sm.ms/image/qCag3m4EuwT6hI2
         检查一组div是是否在时间范围内
+        :param check_early: 是否要检查微博范围是否早于设定时间
+        :param check_later: 是否要检查微博范围是否湾于设定时间
         :param divs: etree.HTML() 的divs
         :return:
 
