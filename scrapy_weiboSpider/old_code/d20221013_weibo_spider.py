@@ -1,10 +1,18 @@
 # -*- coding: utf-8 -*-
+
+"""
+
+微博主页加载方式修改，只前有翻页，现在是一直下滑获取
+url没有变，但是无法获取到页数
+新代码将会删除页数获取部分，使用微博总条数计算页数
+
+"""
+
 import scrapy
 import os
 import json
 import time
 import sys
-import math
 from lxml.html import etree
 import traceback
 import re
@@ -19,9 +27,9 @@ from scrapy_weiboSpider.settings import get_key_word
 from scrapy_weiboSpider.config_path_file import config_path
 
 
-def CookiestoDic(str1):
+def CookiestoDic(str):
     result = {}
-    cookies = str1.split(";")
+    cookies = str.split(";")
     cookies_pattern = re.compile("(.*?)=(.*)")
 
     for cook in cookies:
@@ -34,7 +42,7 @@ def CookiestoDic(str1):
 
 
 class WeiboSpiderSpider(scrapy.Spider):
-    name = 'wb_spider'
+    name = 'd20221013'
     allowed_domains = ['weibo.com']
     config = json.load(open(config_path, "r", encoding="utf-8"))
     key_word = get_key_word(config)
@@ -112,6 +120,7 @@ class WeiboSpiderSpider(scrapy.Spider):
                 logging.info("主动退出")
                 os._exit(0)
 
+
     def session_get(self, url):
         """
         使用requests 的 session去get
@@ -137,12 +146,12 @@ class WeiboSpiderSpider(scrapy.Spider):
 
     def start_requests(self):
         self.start()
-        print("-----")
+
         # 网络测试
-        ident, page_num = self.get_ident_and_page_num()
+        ident = self.get_user_ident()
         print(ident)
         # 获取页数
-        # page_num = self.get_page_num()
+        page_num = self.get_page_num()
         # 第一部分和后两部分的链接不同，分两个连接
         first_part_url_base = "https://weibo.com/u/{}?page={}&is_all=1"
         sub_part_url_base = "https://weibo.com/p/aj/v6/mblog/mbloglist?ajwvr=6&domain=100505&visible=0&is_all=1" \
@@ -647,15 +656,16 @@ class WeiboSpiderSpider(scrapy.Spider):
 
         # 存在item_ele
         if item_eles and is_original:
-
             item_ele = item_eles[0]
-            imgs_src = item_ele.xpath(".//li[contains(@class,'WB_pic')]/img/@src")
-            if imgs_src:
-                mid = parse.xpath(".//div[contains(@class,'WB_from')]/a/@name")[0]
-                for img_src in imgs_src:
-                    img_id = img_src.split("/")[-1].split(".")[0]
-                    wimg_url = "https://photo.weibo.com/{}/wbphotos/large/mid/{}/pid/{}".format(user_id, mid, img_id)
-                    img_list.append(wimg_url)
+            img_list = item_ele.xpath(".//li[contains(@class,'WB_pic')]/img/@src")
+
+            # img_info_list = item_ele.xpath(".//li[contains(@class,'WB_pic')]/@suda-uatrack")
+            # # 存在图片ele
+            # if img_info_list:
+            #     img_list = [self.parse_img_list(img_info) for img_info in img_info_list]
+            # else:
+            #     img_list = []
+
         # 视频
         video_url = ""
         video_url_info = parse.xpath(".//li[contains(@class,'WB_video')]/@suda-uatrack")
@@ -872,7 +882,7 @@ class WeiboSpiderSpider(scrapy.Spider):
             comment_time_result = comment_time
         return comment_time_result
 
-    def get_ident_and_page_num(self):
+    def get_user_ident(self):
         """
         获取用户标识 用户名[用户id]，检测下网络
         :return:
@@ -881,53 +891,66 @@ class WeiboSpiderSpider(scrapy.Spider):
         base_url = "https://weibo.com/u/{}?page=1&is_all=1".format(user_id)
         print(base_url)
         count = 0
-        flag = 0
         while True:
             count += 1
             first_part_response = self.session_get(base_url)
             parse = etree.HTML(first_part_response.text)
             scripts = parse.xpath("//script")
-            user_ident = ""
-            all_wb_num = 0
-            page_num = 0
             for script in scripts[::-1]:
-                # 从一堆script里提取html出来
                 try:
                     re_s = re.search(r"\(({.*})\)", script.text.replace("\n", ""))
                     html_text = json.loads(re_s.group(1))["html"]
-                    script_parse = etree.HTML(html_text)
-                    open("./test.html", "w", encoding="utf-8").write(html_text)
-                except (KeyError, AttributeError) as e:
-                    continue
-                if not user_ident:
-                    try:
-                        # 没搞到的话这里会直接抛报错
-                        user_name = script_parse.xpath("//div[contains(@class,'WB_info')]/a/text()")[0]
+                    parse = etree.HTML(html_text)
+                    user_name = parse.xpath("//div[contains(@class,'WB_info')]/a/text()")
+                    # all_wb_num = parse.xpath("//table[@class='tb_counter']//td[3]//a[@bpfilter='page_frame']/strong/text()")
+                    if user_name:
+                        user_name = user_name[0]
                         user_ident = "{}[{}]".format(user_name, user_id)
-                        print("成功获取到iden {}".format(user_ident))
-                    except (IndexError,AttributeError) as e:
-                        """这是正常流程"""
-                        pass
-
-                if not all_wb_num:
-                    try:
-                        all_wb_num = script_parse.xpath(
-                            "//table[@class='tb_counter']//td[3]//a[@bpfilter='page_frame']/strong/text()")[0]
-                        all_wb_num = int(all_wb_num)
-                        print("总微博条数 {}".format(all_wb_num))
-                        page_num = math.ceil(all_wb_num / 45)
-                    except (IndexError, KeyError, AttributeError):
-                        """这也是正常流程"""
-                        continue
-                if page_num and user_ident:
-                    flag = 1
-                    break
-            if flag:
-                break
+                        print("成功获取到ideng")
+                        # print("总微博数{}".format(all_wb_num))
+                        return user_ident
+                except:
+                    pass
             if count % 5 == 0:
-                print("获取ident/page已经失败 {} 次，如失败次数过多请检查网络，或尝试更新cookies".format(count))
+                print("获取ident已经失败 {} 次，如失败次数过多请检查网络，或尝试更新cookies".format(count))
                 time.sleep(3)
-        return user_ident, page_num
+
+    def get_page_num(self):
+        """
+        :return: 该用户微博总页数
+        """
+        user_id = self.config["user_id"]
+        sub_part_url_base = "https://weibo.com/p/aj/v6/mblog/mbloglist?ajwvr=6&domain=100505&visible=0&is_all=1" \
+                            "&profile_ftype=1&page={}&pagebar={}&pl_name=Pl_Official_MyProfileFeed__20" \
+                            "&id=100505{}&script_uri=/{}/profile&feed_type=0&pre_page={}&domain_op=100505&__rnd={} "
+        page = 1
+        url3 = sub_part_url_base.format(page, 1, user_id, user_id, page, int(time.time() * 1000))
+        count = 0
+        while True:
+            count += 1
+            response = self.session_get(url3)
+            try:
+                open("test.html", "a", encoding="utf-8").write(response.content.decode("utf-8"))
+                html_text = json.loads(response.text)["data"]
+                parse = etree.HTML(html_text)
+                page = parse.xpath("//div[@class='W_pages']//a[@bpfilter='page']/@action-data")[0] \
+                    .split("countPage=")[1]
+                page = int(page)
+                if page:
+                    break
+            except Exception as e:
+                print(repr(e))
+
+                if count % 3 == 0:
+                    print("获取页数失败 {} 次".format(count))
+                    time.sleep(3)
+                if count == 10:
+                    print("获取页数失败 10 次，设总页数为 1 页")
+                    page = 1
+                    break
+
+        print("微博总页数： {}".format(page))
+        return page
 
     def parse_img_list(self, img_info):
         # 解析图片列表
@@ -1024,7 +1047,6 @@ class WeiboSpiderSpider(scrapy.Spider):
 
     def t_is_divs_in_time_range(self, divs, check_early, check_later):
         """
-        一组div是否在时间范围内
         这段别再动了，要梳逻辑的话对着这个梳 https://sm.ms/image/qCag3m4EuwT6hI2
         检查一组div是是否在时间范围内
         :param check_early: 是否要检查微博范围是否早于设定时间
@@ -1070,7 +1092,7 @@ class WeiboSpiderSpider(scrapy.Spider):
 
     def t_is_time_in_range(self, time1):
         """
-        判断单条微博时间（time1）是否在指定时间范围内
+        time1是否在指定时间范围内
         包早不包晚
         :param time1: 毫秒时间戳(13位)或 "%Y-%m-%d %H:%M"格式的字符串
         :return:

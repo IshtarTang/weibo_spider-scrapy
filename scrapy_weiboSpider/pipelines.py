@@ -44,7 +44,7 @@ class ScrapyWeibospiderPipeline(object):
 
         print("文件初始化完成")
 
-    def process_item(self, item, spider):
+    def process_item(self, item:scrapy.Item, spider):
         """
         会先暂存到中间文件
         :param item:
@@ -53,6 +53,7 @@ class ScrapyWeibospiderPipeline(object):
         """
 
         if isinstance(item, weiboItem):
+
             wb_dict = {
                 "bid": item["bid"],
                 "t_bid": item["t_bid"],
@@ -79,6 +80,7 @@ class ScrapyWeibospiderPipeline(object):
 
             }
 
+
             self.weibo_file.write(json.dumps(wb_dict, ensure_ascii=False) + "\n")
             return "wb {} 到暂存文件".format(item["wb_url"].split("?")[0])
 
@@ -102,7 +104,6 @@ class ScrapyWeibospiderPipeline(object):
             }
 
             if item["comment_type"] == "root":
-
                 self.rcomm_file.write(json.dumps(comm_dict, ensure_ascii=False) + "\n")
                 return "r comm {} id[{}] superior_id[{}]".format(
                     item["content"], item["comment_id"], item["superior_id"])
@@ -137,9 +138,9 @@ class ScrapyWeibospiderPipeline(object):
         if rcomms_str:
             rcomm_dicts = [json.loads(str1) for str1 in rcomms_str.strip().split("\n")]
             rcomm_dicts = self.drop_duplicate(rcomm_dicts, "comment_id")
-
         else:
             rcomm_dicts = []
+
         wb_dict = [json.loads(str1) for str1 in wb_str.strip().split("\n")]
 
         # 排序分组子评论

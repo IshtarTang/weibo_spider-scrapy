@@ -212,7 +212,7 @@ SCHEDULER_QUEUE_CLASS = 'scrapy_redis.queue.PriorityQueue'
 
 RETRY_TIMES = 4
 LOG_FILE = get_log_path()
-LOG_LEVEL = 'DEBUG'
+LOG_LEVEL = 'INFO'
 
 BOT_NAME = 'scrapy_weiboSpider'
 SPIDER_MODULES = ['scrapy_weiboSpider.spiders']
