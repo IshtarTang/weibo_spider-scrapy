@@ -929,12 +929,12 @@ class WeiboSpiderSpider(scrapy.Spider):
                 time.sleep(3)
         return user_ident, page_num
 
-    def parse_img_list(self, img_info):
-        # 解析图片列表
-        img_url_base = "https://photo.weibo.com/{}/wbphotos/large/mid/{}/pid/{}"
-        img_match = re.search(r":(\d+):(\w+):(\d+)", img_info)
-        img_url = img_url_base.format(img_match.group(3), img_match.group(1), img_match.group(2))
-        return img_url
+    # def parse_img_list(self, img_info):
+    #     # 解析图片列表
+    #     img_url_base = "https://photo.weibo.com/{}/wbphotos/large/mid/{}/pid/{}"
+    #     img_match = re.search(r":(\d+):(\w+):(\d+)", img_info)
+    #     img_url = img_url_base.format(img_match.group(3), img_match.group(1), img_match.group(2))
+    #     return img_url
 
     def deal_err(self, failure):
 
