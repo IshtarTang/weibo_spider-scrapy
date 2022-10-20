@@ -2,6 +2,7 @@
   * [配置文件](#配置文件)
   * [启动](#启动)
 * [结果文件](#结果文件)
+* [联系我](#联系我)
 * [其他](#其他)
 
 
@@ -12,9 +13,10 @@
 
 #### 配置文件
 
-配置文件在configs下，`I1_userWB_config.json`是爬取用户微博的配置文件；`I1_debug.json`比正常I1多两个调试项，是调试用的；I2 和 I3功能未完成。
+配置文件在configs下，`I1_userWB_config.json`是爬取用户微博的配置文件，一般使用改这个就行。
 
-在`scrapy_weiboSpider/config_path_file.py`中设置要启用的配置文件路径，默认配置文件是`configs/I1_userWB_config.json`
+`I1_debug.json`比正常I1多两个调试项，我调试用的；I2 和 I3功能未完成。
+可以搞多个配置文件，只要按格式写就行，在`scrapy_weiboSpider/config_path_file.py`中设置你要启用的配置文件路径。
 
 灰框内为不用动的，蓝框内为基础设置，每个配置文件都有，橙框内为每个模式的功能设置
 
@@ -24,11 +26,13 @@
 
 
 
-**不动项与基础配置**
+**不用动的部分**
 
 `description`：用来看的
 
 `id`：用来确认启用哪个模式
+
+**基础配置**
 
 `cookies_str`：登录状态信息，没有这个只能获取到一页内容，[cookies 获取](./笔记图/README/cookies获取.png)
 
@@ -94,17 +98,17 @@
 
 #### 启动
 
-<br>
+
 
  **环境配置**
 
-没装python的先装python
+首先你电脑肯定得装了python
 
-项目路径下开命令提示符，输` pip install -r requirements.txt `
+项目路径下开命令行，输` pip install -r requirements.txt `
 
 程序用到了redis来保证下载中断后可保持进度，得装redis，到这下 https://github.com/tporadowski/redis/releases ，我用的版本是3.0.504。或者直接百度云，https://pan.baidu.com/s/1_Zf-fOKZ52ZGgHxMCh0HbA 提取码：2q4z。
 
-下zip文件解压后戳`redis-server.exe`，弹出右边的窗口就是启动成功了。每次程序启动前都需要先启动redis。
+解压后戳`redis-server.exe`，弹出右边的窗口就是启动成功了。每次程序启动前都需要先启动redis。
 
 ![1628613064721](%E7%AC%94%E8%AE%B0%E5%9B%BE/README/1628613064721.png)
 
@@ -116,9 +120,9 @@
 
 **启动程序**
 
-按上面的修改配置文件
+先按前面说的修改配置文件
 
-项目路径下输入 `scrapy crawl wb_spider`
+改好后 项目路径下敲  `scrapy crawl wb_spider`
 
 ![1628616482050](%E7%AC%94%E8%AE%B0%E5%9B%BE/README/1628616482050.png)
 
@@ -176,6 +180,12 @@ weibo.txt、rcomm.txt 和ccomm.txt是过程文件，weibo是微博信息，rcomm
 
 
 
+### 联系我
+
+有问题的话我的邮箱是 ishtartang@163.com，如果要讨论，微信号`Ishtar_Tang`，备注从微博爬虫来的。
+
+
+
 
 
 ### 其他
@@ -218,11 +228,7 @@ weibo.txt、rcomm.txt 和ccomm.txt是过程文件，weibo是微博信息，rcomm
 
 <br><br>
 
-有问题的话我的邮箱是ishtartang@163.com，如果要讨论，微信号`Ishtar_Tang`。
 
-<br>
-
-<br>
 
 
 
