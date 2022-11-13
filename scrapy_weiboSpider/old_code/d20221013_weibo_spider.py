@@ -930,7 +930,7 @@ class WeiboSpiderSpider(scrapy.Spider):
             count += 1
             response = self.session_get(url3)
             try:
-                open("test.html", "a", encoding="utf-8").write(response.content.decode("utf-8"))
+                open("writeing.html", "a", encoding="utf-8").write(response.content.decode("utf-8"))
                 html_text = json.loads(response.text)["data"]
                 parse = etree.HTML(html_text)
                 page = parse.xpath("//div[@class='W_pages']//a[@bpfilter='page']/@action-data")[0] \

@@ -896,7 +896,7 @@ class WeiboSpiderSpider(scrapy.Spider):
                     re_s = re.search(r"\(({.*})\)", script.text.replace("\n", ""))
                     html_text = json.loads(re_s.group(1))["html"]
                     script_parse = etree.HTML(html_text)
-                    open("./test.html", "w", encoding="utf-8").write(html_text)
+                    open("./writeing.html", "w", encoding="utf-8").write(html_text)
                 except (KeyError, AttributeError) as e:
                     continue
                 if not user_ident:
