@@ -1,1 +1,1 @@
-config_path = "./configs/ZLXHIM.json"
+config_path = "./configs/cat.json"

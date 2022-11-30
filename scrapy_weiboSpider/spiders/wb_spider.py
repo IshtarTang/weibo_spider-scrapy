@@ -15,8 +15,8 @@ import requests
 import msvcrt
 import logging
 from scrapy_weiboSpider.items import weiboItem, commentItem
-from scrapy_weiboSpider.settings import get_key_word
 from scrapy_weiboSpider.config_path_file import config_path
+import spider_tool
 
 
 def CookiestoDic(str1):
@@ -34,10 +34,14 @@ def CookiestoDic(str1):
 
 
 class WeiboSpiderSpider(scrapy.Spider):
+    custom_settings = {
+        'LOG_FILE': spider_tool.get_log_path(),
+    }
+    LOG_FILE = spider_tool.get_log_path()
     name = 'wb_spider'
     allowed_domains = ['weibo.com']
     config = json.load(open(config_path, "r", encoding="utf-8"))
-    key_word = get_key_word(config)
+    key_word = spider_tool.get_key_word(config)
     saved_key = []
     headers = {
         "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.141 Safari/537.36"}
@@ -50,6 +54,12 @@ class WeiboSpiderSpider(scrapy.Spider):
     session.cookies.update(cookies)
 
     def start(self):
+        if not spider_tool.check_config(self.config):
+            print("配置文件错误，按任意键退出")
+            ord(msvcrt.getch())
+            exit()
+        else:
+            print("检查完成")
         print("\n本次运行的文件key为 {}".format(self.key_word))
         comm_config_str = {"wb_rcomm": "微博根评论", "wb_ccomm": "微博子评论", "rwb_rcomm": "源微博根评论", "rwb_ccomm": "源微博子评论"}
         print("评论获取设置：", end="\t")
@@ -105,12 +115,11 @@ class WeiboSpiderSpider(scrapy.Spider):
             print("未读取到上次的记录")
 
         print("请确认redis已启动，按任意键继续，或Esc以退出")
-        if not self.saved_key:
-            x = ord(msvcrt.getch())
-            if x == 27:
-                print("程序退出")
-                logging.info("主动退出")
-                os._exit(0)
+        x = ord(msvcrt.getch())
+        if x == 27:
+            print("程序退出")
+            logging.info("主动退出")
+            os._exit(0)
 
     def session_get(self, url):
         """
@@ -137,10 +146,9 @@ class WeiboSpiderSpider(scrapy.Spider):
 
     def start_requests(self):
         self.start()
-        print("-----")
         # 网络测试
         ident, page_num = self.get_ident_and_page_num()
-        print(ident)
+        print("成功获取到iden {}".format(ident))
         # 获取页数
         # page_num = self.get_page_num()
         # 第一部分和后两部分的链接不同，分两个连接
@@ -158,12 +166,12 @@ class WeiboSpiderSpider(scrapy.Spider):
             page_range = range(int(tmp_str.split("-")[0]), int(tmp_str.split("-")[1]) + 1)
             print("调试项启动，页数范围 {}".format(tmp_str))
         print("按任意键继续，或Esc以退出")
-        if not self.saved_key:
-            x = ord(msvcrt.getch())
-            if x == 27:
-                print("程序退出")
-                logging.info("主动退出")
-                os._exit(0)
+        # if not self.saved_key:
+        x = ord(msvcrt.getch())
+        if x == 27:
+            print("程序退出")
+            logging.info("主动退出")
+            os._exit(0)
 
         for page in page_range:
             url1 = first_part_url_base.format(user_id, page)
@@ -879,7 +887,7 @@ class WeiboSpiderSpider(scrapy.Spider):
         """
         user_id = self.config["user_id"]
         base_url = "https://weibo.com/u/{}?page=1&is_all=1".format(user_id)
-        print(base_url)
+        print("测试获取",base_url)
         count = 0
         flag = 0
         while True:
@@ -904,8 +912,8 @@ class WeiboSpiderSpider(scrapy.Spider):
                         # 没搞到的话这里会直接抛报错
                         user_name = script_parse.xpath("//div[contains(@class,'WB_info')]/a/text()")[0]
                         user_ident = "{}[{}]".format(user_name, user_id)
-                        print("成功获取到iden {}".format(user_ident))
-                    except (IndexError,AttributeError) as e:
+
+                    except (IndexError, AttributeError) as e:
                         """这是正常流程"""
                         pass
 

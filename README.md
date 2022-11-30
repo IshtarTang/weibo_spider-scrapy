@@ -106,7 +106,7 @@
 
 项目路径下开命令行，输` pip install -r requirements.txt `
 
-程序用到了redis来保证下载中断后可保持进度，得装redis，到这下 https://github.com/tporadowski/redis/releases ，我用的版本是3.0.504。或者直接百度云，https://pan.baidu.com/s/1_Zf-fOKZ52ZGgHxMCh0HbA 提取码：2q4z。
+程序用到了redis来做进度记录和过滤，下载地址 https://github.com/tporadowski/redis/releases ，我用的版本是3.0.504。
 
 解压后戳`redis-server.exe`，弹出右边的窗口就是启动成功了。每次程序启动前都需要先启动redis。
 
@@ -126,9 +126,7 @@
 
 ![1628616482050](%E7%AC%94%E8%AE%B0%E5%9B%BE/README/1628616482050.png)
 
-它就跑起来了，然后把它扔那该干啥干啥，啥时候想起来就看看它跑完没。
-
-由于我不小心把之前的测试日志给删了，所以我也不知道效率咋样，等我下次测试再写上来。
+它就跑起来了，把它扔那该干啥干啥，别断网就行，啥时候想起来就看看它跑完没。
 
 <br>
 

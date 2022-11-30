@@ -16,7 +16,7 @@ import requests
 import msvcrt
 import logging
 from scrapy_weiboSpider.items import weiboItem, commentItem
-from scrapy_weiboSpider.settings import get_key_word
+from spider_tool import get_key_word
 from scrapy_weiboSpider.config_path_file import config_path
 
 
@@ -35,7 +35,7 @@ def CookiestoDic(str1):
 
 
 class WeiboSpiderSpider(scrapy.Spider):
-    name = 'tmp_spider'
+    name = 'new_wb_spider'
     allowed_domains = ['weibo.com']
     config = json.load(open(config_path, "r", encoding="utf-8"))
     user_id = config["user_id"]
@@ -77,12 +77,6 @@ class WeiboSpiderSpider(scrapy.Spider):
 
     cookies = CookiestoDic(config["cookies_str"])
 
-    # 制造requests session
-    session_start_time = time.time()
-    session = requests.session()
-    session.headers = headers
-    session.cookies.update(cookies)
-
     def start(self):
         print("\n本次运行的文件key为 {}".format(self.key_word))
         comm_config_str = {"wb_rcomm": "微博根评论", "wb_ccomm": "微博子评论", "rwb_rcomm": "源微博根评论", "rwb_ccomm": "源微博子评论"}
@@ -95,8 +89,6 @@ class WeiboSpiderSpider(scrapy.Spider):
                                   get_comm_num if not get_comm_num == sys.maxsize else "all"), end="   ")
 
         # 录入之前的下载记录，避免重复爬取
-        # if os.path.exists("./file" + "/" + self.key_word + "/wb_result.json"):
-        #     print("\n目标路径下已有上次运行产生的文件，本次运行爬取的微博会更新到文件中")
         simple_wb_path = "./file" + "/" + self.key_word + "/prefile/simple_wb_info.json"
         per_wb_path = "./file" + "/" + self.key_word + "/prefile/weibo.txt"
         result_path = "./file" + "/" + self.key_word + "/wb_result.json"
@@ -147,7 +139,6 @@ class WeiboSpiderSpider(scrapy.Spider):
 
     def start_requests(self):
         self.start()
-        print("-----")
         start_url = "https://weibo.com/ajax/statuses/mymblog?" \
                     "uid={}&page={}&feature=0".format(self.user_id, 1)
         yield Request(start_url, callback=self.del_mymblog,

@@ -5,7 +5,7 @@
 # Don't forget to add your pipeline to the ITEM_PIPELINES setting
 # See: https://docs.scrapy.org/en/latest/topics/item-pipeline.html
 from scrapy_weiboSpider.items import *
-from scrapy_weiboSpider.settings import get_key_word
+from spider_tool import get_key_word
 import json
 import os
 import logging
