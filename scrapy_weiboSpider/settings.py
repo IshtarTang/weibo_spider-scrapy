@@ -1,11 +1,7 @@
 # -*- coding: utf-8 -*-
 import json
-import time
-import re
-import os
-import msvcrt
 from scrapy_weiboSpider.config_path_file import config_path
-import spider_tool
+from spider_tool import comm_tool
 
 config = json.load(open(config_path, "r", encoding="utf-8"))
 
@@ -16,20 +12,23 @@ REDIS_HOST = '127.0.0.1'
 REDIS_PORT = 6379
 
 # redis key
-redis_key = spider_tool.get_key_word(config, False)
+redis_key = comm_tool.get_key_word(config, False)
 SCHEDULER_DUPEFILTER_KEY = '{}:dupefilter'.format(redis_key)
 SCHEDULER_QUEUE_KEY = "{}:requests".format(redis_key)
 
 SCHEDULER = "scrapy_redis.scheduler.Scheduler"
-DUPEFILTER_CLASS = "scrapy_redis.dupefilter.RFPDupeFilter"
-# DUPEFILTER_CLASS = "T_filter.Filtre1.RFPDupeFilter"
-# 将Requests队列持久化到Redis，可支持暂停或重启爬虫
+# DUPEFILTER_CLASS = "scrapy_redis.dupefilter.RFPDupeFilter"
+# 这里不走scrapy的过滤，如果结果文件里没有上次的记录是需要重复爬的
+# DUPEFILTER_CLASS = "scrapy.dupefilters.RFPDupeFilter"
+DUPEFILTER_CLASS = "T_filter.Filtre1.RFPDupeFilter"
+# 关闭时保留调度器和去重记录
 SCHEDULER_PERSIST = True
-# Requests的调度策略，默认优先级队列
+# 调度策略
 SCHEDULER_QUEUE_CLASS = 'scrapy_redis.queue.PriorityQueue'
 
 RETRY_TIMES = 4
-LOG_FILE = "./log/default_log.log"
+LOG_FILE = comm_tool.get_log_path()
+# LOG_FILE = "log/defualt.log"
 LOG_LEVEL = 'INFO'
 
 RETRY_HTTP_CODES = [500, 502, 503, 504, 522, 524, 408, 429, 400]

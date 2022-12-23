@@ -8,6 +8,7 @@
 from scrapy import signals
 import json
 from scrapy_weiboSpider.config_path_file import config_path
+from spider_tool import comm_tool
 
 
 class ScrapyWeibospiderSpiderMiddleware(object):
@@ -81,8 +82,7 @@ class ScrapyWeibospiderDownloaderMiddleware(object):
         #   installed downloader middleware will be called
         config = json.load(open(config_path, encoding="utf-8"), encoding="utf-8")
         cookies = config["cookies_str"]
-        from scrapy_weiboSpider.spiders.wb_spider import CookiestoDic
-        request.cookies = CookiestoDic(cookies)
+        request.cookies = comm_tool.cookiestoDic(cookies)
         return None
 
     def process_response(self, request, response, spider):

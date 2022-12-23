@@ -16,36 +16,21 @@ import msvcrt
 import logging
 from scrapy_weiboSpider.items import weiboItem, commentItem
 from scrapy_weiboSpider.config_path_file import config_path
-import spider_tool
-
-
-def CookiestoDic(str1):
-    result = {}
-    cookies = str1.split(";")
-    cookies_pattern = re.compile("(.*?)=(.*)")
-
-    for cook in cookies:
-        cook = cook.replace(" ", "")
-        header_name = cookies_pattern.search(cook).group(1)
-        header_value = (cookies_pattern.search(cook).group(2))
-        result[header_name] = header_value
-
-    return result
+from spider_tool import comm_tool
 
 
 class WeiboSpiderSpider(scrapy.Spider):
     custom_settings = {
-        'LOG_FILE': spider_tool.get_log_path(),
+        'LOG_FILE': comm_tool.get_log_path(),
     }
-    LOG_FILE = spider_tool.get_log_path()
     name = 'wb_spider'
     allowed_domains = ['weibo.com']
     config = json.load(open(config_path, "r", encoding="utf-8"))
-    key_word = spider_tool.get_key_word(config)
+    key_word = comm_tool.get_key_word(config)
     saved_key = []
     headers = {
         "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.141 Safari/537.36"}
-    cookies = CookiestoDic(config["cookies_str"])
+    cookies = comm_tool.cookiestoDic(config["cookies_str"])
 
     # 制造requests session
     session_start_time = time.time()
@@ -54,7 +39,7 @@ class WeiboSpiderSpider(scrapy.Spider):
     session.cookies.update(cookies)
 
     def start(self):
-        if not spider_tool.check_config(self.config):
+        if not comm_tool.check_config(self.config):
             print("配置文件错误，按任意键退出")
             ord(msvcrt.getch())
             exit()
@@ -74,18 +59,9 @@ class WeiboSpiderSpider(scrapy.Spider):
         # 录入之前的下载记录，避免重复爬取
         # if os.path.exists("./file" + "/" + self.key_word + "/wb_result.json"):
         #     print("\n目标路径下已有上次运行产生的文件，本次运行爬取的微博会更新到文件中")
-        simple_wb_path = "./file" + "/" + self.key_word + "/prefile/simple_wb_info.json"
         per_wb_path = "./file" + "/" + self.key_word + "/prefile/weibo.txt"
         result_path = "./file" + "/" + self.key_word + "/wb_result.json"
         saved_key_config = self.config.get("deubg", {}).get("saved_key_file", "")
-        if os.path.exists(simple_wb_path):
-            if "swb" in saved_key_config or not saved_key_config:
-                saved_wb1 = json.load(open(simple_wb_path, "r", encoding="utf-8"))
-                self.saved_key += list(saved_wb1.keys())
-                if saved_wb1:
-                    print("录入 {} 的微博下载记录".format(simple_wb_path))
-                else:
-                    print("{} 无记录".format(simple_wb_path))
 
         if os.path.exists(result_path):
             if "wb" in saved_key_config or not saved_key_config:
@@ -93,9 +69,9 @@ class WeiboSpiderSpider(scrapy.Spider):
                 for wb in saved_wbs:
                     self.saved_key.append(wb["bid"])
                 if saved_wbs:
-                    print("录入 {} 的微博下载记录".format(simple_wb_path))
+                    print("录入 {} 的微博下载记录".format(result_path))
                 else:
-                    print("{} 无记录".format(simple_wb_path))
+                    print("{} 无记录".format(result_path))
         if os.path.exists(per_wb_path):
             if "pwb" in saved_key_config or not saved_key_config:
                 file1 = open(per_wb_path, "r", encoding="utf-8").read().strip()
@@ -104,9 +80,9 @@ class WeiboSpiderSpider(scrapy.Spider):
                 for x in file:
                     self.saved_key.append(x["bid"])
                 if file:
-                    print("录入 {} 的微博下载记录".format(simple_wb_path))
+                    print("录入 {} 的微博下载记录".format(per_wb_path))
                 else:
-                    print("{} 无记录".format(simple_wb_path))
+                    print("{} 无记录".format(per_wb_path))
 
         self.saved_key = list(set(self.saved_key))
         if self.saved_key:
@@ -887,7 +863,7 @@ class WeiboSpiderSpider(scrapy.Spider):
         """
         user_id = self.config["user_id"]
         base_url = "https://weibo.com/u/{}?page=1&is_all=1".format(user_id)
-        print("测试获取",base_url)
+        print("测试获取", base_url)
         count = 0
         flag = 0
         while True:

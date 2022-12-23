@@ -3,6 +3,25 @@ import os
 import re
 
 
+def cookiestoDic(str1):
+    """
+    chrome上复制下来的cookeis转dict
+    :param str1:
+    :return:
+    """
+    result = {}
+    cookies = str1.split(";")
+    cookies_pattern = re.compile("(.*?)=(.*)")
+
+    for cook in cookies:
+        cook = cook.replace(" ", "")
+        header_name = cookies_pattern.search(cook).group(1)
+        header_value = (cookies_pattern.search(cook).group(2))
+        result[header_name] = header_value
+
+    return result
+
+
 def get_log_path(id=0):
     """
     生成一个日志路径，之后大概会改成传配置文件，按配置文件设路径
@@ -166,7 +185,6 @@ def get_key_word(config, user_Chinese_symbols=True):
                 start_time = "x"
             key_word += "[{} - {}]".format(start_time, stop_time)
 
-
     elif config["id"] == 2:
         config = config["search_config"]
         key_word = "wb_2_{}".format(config["search_code"])
@@ -179,3 +197,9 @@ def get_key_word(config, user_Chinese_symbols=True):
         print("你咋没调check_config")
         exit()
     return key_word
+
+
+def get_result_filepath(config):
+    key_word = get_key_word(config)
+    path = "file/" + key_word
+    return path
