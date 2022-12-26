@@ -6,28 +6,54 @@
 # https://docs.scrapy.org/en/latest/topics/spider-middleware.html
 
 from scrapy import signals
+from scrapy.exceptions import IgnoreRequest
 import json
-from scrapy_weiboSpider.config_path_file import config_path
-from spider_tool import comm_tool
+import logging
+
+
+class MyCountDownloaderMiddleware(object):
+    def process_response(self, request, response, spider):
+        """
+        新版微博返回的json数据中有个{"ok":1}用来表示获取成功
+        这个中间件用来检查ok是否为1，不为1会重新请求
+        默认不检查，如果需要检查，在meta中加{"my_count": 0}
+        """
+        meta = request.meta
+        my_count = meta.get("my_count", -1)
+        # 不需检查
+        if my_count == -1:
+            return response
+
+        j_data = json.loads(response.text)
+        # 请求正常，无事发生
+        if j_data["ok"] == 1:
+            return response
+
+        if my_count < 5:
+            # 失败次数不超过5，+1重试
+            request.meta["my_count"] += 1
+            logging.info("{} 重新获取{}次".format(request.url, request.meta["my_count"]))
+            print("{} 重新获取{}次".format(request.url, request.meta["my_count"]))
+            return request
+        else:
+            if request.url == response.url:
+                message = "{}：ok不为1，meta:{}，".format(request.url, meta)
+            else:
+                message = "{}：ok不为1，重定向至{}，meta:{}".format(request.url, response.url, meta)
+            logging.error(message)
+            print(message)
+            raise IgnoreRequest  # 会去调用Request.errback
 
 
 class ScrapyWeibospiderSpiderMiddleware(object):
-    # Not all methods need to be defined. If a method is not defined,
-    # scrapy acts as if the spider middleware does not modify the
-    # passed objects.
 
     @classmethod
     def from_crawler(cls, crawler):
-        # This method is used by Scrapy to create your spiders.
         s = cls()
         crawler.signals.connect(s.spider_opened, signal=signals.spider_opened)
         return s
 
     def process_spider_input(self, response, spider):
-        # Called for each response that goes through the spider
-        # middleware and into the spider.
-
-        # Should return None or raise an exception.
         return None
 
     def process_spider_output(self, response, result, spider):
@@ -72,17 +98,18 @@ class ScrapyWeibospiderDownloaderMiddleware(object):
         return s
 
     def process_request(self, request, spider):
-        # Called for each request that goes through the downloader
-        # middleware.
+        # Called for each request that goes through the downloader middleware.
         # Must either:
         # - return None: continue processing this request
         # - or return a Response object
         # - or return a Request object
         # - or raise IgnoreRequest: process_exception() methods of
         #   installed downloader middleware will be called
-        config = json.load(open(config_path, encoding="utf-8"), encoding="utf-8")
-        cookies = config["cookies_str"]
-        request.cookies = comm_tool.cookiestoDic(cookies)
+
+        # 加cookies，不过现在换成正文里加了，要是正常就把这删了
+        # config = json.load(open(config_path, encoding="utf-8"), encoding="utf-8")
+        # cookies = config["cookies_str"]
+        # request.cookies = comm_tool.cookiestoDic(cookies)
         return None
 
     def process_response(self, request, response, spider):

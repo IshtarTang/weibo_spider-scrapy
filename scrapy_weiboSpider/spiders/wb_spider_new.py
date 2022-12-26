@@ -12,9 +12,16 @@ import logging
 from scrapy_weiboSpider.items import weiboItem, commentItem
 from scrapy_weiboSpider.config_path_file import config_path
 from spider_tool import comm_tool
+import tool
 
 
 class WeiboSpiderSpider(scrapy.Spider):
+    custom_settings = {
+        "DOWNLOADER_MIDDLEWARES": {
+            'scrapy_weiboSpider.middlewares.ScrapyWeibospiderDownloaderMiddleware': 543,
+            'scrapy_weiboSpider.middlewares.MyCountDownloaderMiddleware': 552,  # 比RetryMiddleware早一点
+        }
+    }
     name = 'new_wb_spider'
     allowed_domains = ['weibo.com']
     config = json.load(open(config_path, "r", encoding="utf-8"))
@@ -41,26 +48,39 @@ class WeiboSpiderSpider(scrapy.Spider):
         'x-requested-with': 'XMLHttpRequest',
         # 'x-xsrf-token': '3c2juO2PLntF563RcLZo3K81',
     }
-    comm_headers = {
-        'authority': 'weibo.com',
-        'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
-        'accept-language': 'zh-CN,zh;q=0.9,en;q=0.8,zh-TW;q=0.7',
-        'cache-control': 'no-cache',
-        'pragma': 'no-cache',
-        'sec-ch-ua': '^\\^',
-        'sec-ch-ua-mobile': '?0',
-        'sec-ch-ua-platform': '^\\^Windows^\\^',
-        'sec-fetch-dest': 'document',
-        'sec-fetch-mode': 'navigate',
-        'sec-fetch-site': 'none',
-        'sec-fetch-user': '?1',
-        'upgrade-insecure-requests': '1',
-        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36',
+    comm_headers = headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:108.0) Gecko/20100101 Firefox/108.0',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+        'Accept-Language': 'zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Connection': 'keep-alive',
+        'Upgrade-Insecure-Requests': '1',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
     }
+    # comm_headers = {
+    #     'authority': 'weibo.com',
+    #     'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
+    #     'accept-language': 'zh-CN,zh;q=0.9,en;q=0.8,zh-TW;q=0.7',
+    #     'cache-control': 'no-cache',
+    #     'pragma': 'no-cache',
+    #     'sec-ch-ua': '^\\^',
+    #     'sec-ch-ua-mobile': '?0',
+    #     'sec-ch-ua-platform': '^\\^Windows^\\^',
+    #     'sec-fetch-dest': 'document',
+    #     'sec-fetch-mode': 'navigate',
+    #     'sec-fetch-site': 'none',
+    #     'sec-fetch-user': '?1',
+    #     'upgrade-insecure-requests': '1',
+    #     'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36',
+    # }
 
     cookies = comm_tool.cookiestoDic(config["cookies_str"])
 
     def start(self):
+        """
+        一些打印输出；读上次获取完成的微博，制成self.saved_key
+        """
         print("\n本次运行的文件key为 {}".format(self.key_word))
         comm_config_str = {"wb_rcomm": "微博根评论", "wb_ccomm": "微博子评论", "rwb_rcomm": "源微博根评论", "rwb_ccomm": "源微博子评论"}
         print("评论获取设置：", end="\t")
@@ -106,46 +126,50 @@ class WeiboSpiderSpider(scrapy.Spider):
         start_url = "https://weibo.com/ajax/statuses/mymblog?" \
                     "uid={}&page={}&feature=0".format(self.user_id, 1)
         yield Request(start_url, callback=self.del_mymblog,
-                      cookies=self.cookies, headers=self.blog_headers, meta={"wb_count": 0}, dont_filter=True)
+                      cookies=self.cookies, headers=self.blog_headers, meta={"my_count": 0},
+                      dont_filter=True)
 
     def del_mymblog(self, response):
+        """
+        用户主页的数据
+        """
         page = int(response.request.url.split("page=")[1].split("&")[0])
-        print("获取到page {} 页面，开始解析".format(page))
+        print("获取到page {} 页面".format(page), end="\t")
         logging.info("获取到page {} ".format(page))
+
         content = response.text
         j_data = json.loads(content)
         meta = response.meta
-        meta["wb_count"] += 1
         # 下一页
-        # since_id = j_data["data"]["since_id"]
-        # if since_id:
-        #     next_url = "https://weibo.com/ajax/statuses/mymblog?" \
-        #                "uid={}&page={}&feature=0&since_id={}".format(self.user_id, page + 1, since_id)
-        #     yield Request(next_url, callback=self.del_mymblog, meta={"wb_count": 0},
-        #                   cookies=self.cookies, headers=self.blog_headers, priority=1, )
-        # elif meta["wb_count"] < 5:
-        #     time.sleep(2)
-        #     yield Request(response.request.url, callback=self.del_mymblog,
-        #                   cookies=self.cookies, headers=self.blog_headers,
-        #                   meta=meta, dont_filter=True)
-        # else:
-        #     print("页数{} 后面没了".format(page))
-        # 这页内容正不正常
-        if j_data["ok"] != 1 or not j_data.get("data", {}).get("list", []):
-            if meta["wb_count"] < 5:
-                yield Request(response.request.url, callback=self.del_mymblog,
-                              cookies=self.cookies, headers=self.blog_headers,
-                              meta=meta, dont_filter=True, priority=1)
-                logging.warning("page{} 重新获取".format(page))
+        since_id = j_data["data"]["since_id"]
+        if since_id:
+            next_url = "https://weibo.com/ajax/statuses/mymblog?" \
+                       "uid={}&page={}&feature=0&since_id={}".format(self.user_id, page + 1, since_id)
+            yield Request(next_url, callback=self.del_mymblog, meta={"my_count": 0},
+                          cookies=self.cookies, headers=self.blog_headers, priority=1, )
+        # 网络出问题时有可能获取不到下一页
+        elif meta["my_count"] < 5:
+            request = response.request
+            request.meta["my_count"] += 1
+            yield request
+        else:
+            print("页数{} 后面没了".format(page))
 
+        # 是否正常获取到正文
+        if not j_data.get("data", {}).get("list", []):
+            if meta["my_count"] < 5:
+                request = response.request
+                request.meta["my_count"] += 1
+                yield request
+                logging.warning("page{} 无法获取到正文，尝试重新获取".format(page))
             else:
-                logging.error("page{} 获取失败".format(page))
+                logging.error("page{} 无法获取到正文，放弃".format(page))
                 print("page{} 获取失败".format(page))
-                print(meta)
             return
 
         # 解析微博
         wb_list = j_data["data"]["list"]
+        print("页面正常，本页共微博微博{}条，开始解析".format(page, len(wb_list)))
         # 循环微博，解析
         for wb_info in wb_list:
             item_and_request_generator = self.parse_wb(wb_info)
@@ -160,36 +184,31 @@ class WeiboSpiderSpider(scrapy.Spider):
         """
         content = response.text
         j_data = json.loads(content)
-        if j_data["ok"] != 1:
-            meta = response.meta
-            if meta["comm_count"] < 5:
-                meta["comm_count"] += 1
-                time.sleep(2)
-                yield Request(response.request.url, callback=self.get_rcomm,
-                              cookies=self.cookies, headers=self.blog_headers,
-                              meta=meta, dont_filter=True)
-            else:
-                # 这里应该写哪条微博获取失败
-                pass
-            return
-
         meta = response.meta
 
         bid = meta["superior_id"]
         comms = j_data["data"]
-        max_id = j_data["max_id"]
+        max_id = j_data["max_id"]  # max_id用于获取下一页评论
+        next_url = ""
         if max_id:
             o_url = response.request.url
             next_url = o_url.split("&max_id=")[0] + "&max_id=" + str(max_id)
             next_url = next_url.replace("count=10", "count=20")
-            yield Request(next_url, callback=self.get_rcomm, cookies=self.cookies, headers=self.comm_headers,
-                          meta={"comm_count": 0, "superior_id": bid})
+            yield Request(next_url, callback=self.get_ccomm, cookies=self.cookies, headers=self.comm_headers,
+                          meta={"my_count": 0, "superior_id": bid})
+        # 这里要处理能获取到下一页链接，但解析出的评论数量0的问题
+        if len(comms) == 0 and next_url:
+            print(response.url)
+            print(next_url)
+            tool.write_json(j_data, "comms.json")
+            time.sleep(3)
 
         for comm in comms:
             commItem_or_rcommReqs = self.parse_comm(comm, "root", bid)
             for c_or_i in commItem_or_rcommReqs:
                 yield c_or_i
         print("获取到rcomm {}条，上级为 {}".format(len(comms), bid))
+
         logging.debug("获取到rcomm {}条，上级为 {}".format(len(comms), bid))
 
     def get_ccomm(self, response):
@@ -200,18 +219,6 @@ class WeiboSpiderSpider(scrapy.Spider):
         """
         content = response.text
         j_data = json.loads(content)
-        if j_data["ok"] != 1:
-            meta = response.meta
-            if meta["comm_count"] < 5:
-                meta["comm_count"] += 1
-                time.sleep(2)
-                yield Request(response.request.url, callback=self.get_rcomm,
-                              cookies=self.cookies, headers=self.blog_headers,
-                              meta=meta, dont_filter=True)
-            else:
-                # 这里应该写哪条微博获取失败
-                pass
-            return
 
         meta = response.meta
         superior_id = meta["superior_id"]
@@ -221,7 +228,7 @@ class WeiboSpiderSpider(scrapy.Spider):
             o_url = response.request.url
             next_url = o_url.split("&max_id=")[0] + "&max_id=" + str(max_id)
             yield Request(next_url, callback=self.get_rcomm, cookies=self.cookies, headers=self.comm_headers,
-                          meta={"comm_count": 0, "superior_id": superior_id})
+                          meta={"my_count": 0, "superior_id": superior_id})
 
         for comm in comms:
             commItem_or_rcommReqs = self.parse_comm(comm, "child", superior_id)
@@ -249,9 +256,13 @@ class WeiboSpiderSpider(scrapy.Spider):
         :param wb_info:
         :return:
         """
+        remark = ""
         wb_item = weiboItem()
-
-        bid = wb_info["mblogid"]
+        try:
+            bid = wb_info["mblogid"]
+        except:
+            # bid获取不到说明这条微博完全无法看到
+            return
         wb_item["bid"] = bid  # bid，微博的标识
 
         user_id = wb_info["user"]["idstr"]
@@ -290,28 +301,35 @@ class WeiboSpiderSpider(scrapy.Spider):
         wb_item["img_list"] = img_list  # 图片
 
         # 评论详情
-        if wb_info["comments_count"]:
-            comm_url_base = "https://weibo.com/ajax/statuses/buildComments?flow=0&is_reload=1&" \
-                            "id={}&is_show_bulletin=2&is_mix=0&count=10&uid={}"
-            comm_url = comm_url_base.format(mid, user_id)
-            yield Request(comm_url, callback=self.get_rcomm, cookies=self.cookies, headers=self.comm_headers,
-                          meta={"comm_count": 0, "superior_id": bid})
+        # if wb_info["comments_count"]:
+        #     comm_url_base = "https://weibo.com/ajax/statuses/buildComments?flow=0&is_reload=1&" \
+        #                     "id={}&is_show_bulletin=2&is_mix=0&count=10&uid={}"
+        #     comm_url = comm_url_base.format(mid, user_id)
+        #     yield Request(comm_url, callback=self.get_rcomm, cookies=self.cookies, headers=self.comm_headers,
+        #                   meta={"my_count": 0, "superior_id": bid})
         links = []
         if wb_info.get("url_struct", []):
             for url_info in wb_info["url_struct"]:
                 links.append(url_info["ori_url"])
         wb_item["links"] = links
 
+        retweeted_status = wb_info.get("retweeted_status", 0)
         # 是否是转发微博，转发的记录r_href，源微博送去单条解析
-        if wb_info.get("retweeted_status", 0):
+        # 要处理这种能看见转发但原博不可阅读的：https://weibo.com/6591638928/IpXyxmLuO
+        if retweeted_status:
             r_bid = wb_info["retweeted_status"]["mblogid"]
-            r_user = wb_info["retweeted_status"]["user"]["idstr"]
-            r_wb_url = "https://weibo.com/{}/{}".format(r_user, r_bid)
-            r_href = "/{}/{}".format(r_user, r_bid)
-            r_info_url = "https://weibo.com/ajax/statuses/show?id=" + r_bid
-            print("{}的源微博为 {}".format(wb_item["wb_url"], r_wb_url))
-            yield Request(r_info_url, callback=self.get_single_wb, cookies=self.cookies, headers=self.blog_headers,
-                          meta={"count": 0},dont_filter=True)
+            try:
+                r_user = wb_info["retweeted_status"]["user"]["idstr"]
+                r_wb_url = "https://weibo.com/{}/{}".format(r_user, r_bid)
+                r_href = "/{}/{}".format(r_user, r_bid)
+                r_info_url = "https://weibo.com/ajax/statuses/show?id=" + r_bid
+                print("{}的源微博为 {}".format(wb_item["wb_url"], r_wb_url))
+                yield Request(r_info_url, callback=self.get_single_wb, cookies=self.cookies, headers=self.blog_headers,
+                              meta={"count": 0}, dont_filter=True)
+            except:
+                remark += "无法获取源微博"
+                r_href = ""
+
         else:
             r_href = ""
 
@@ -319,15 +337,15 @@ class WeiboSpiderSpider(scrapy.Spider):
         wb_item["t_bid"] = ""
         wb_item["r_href"] = r_href
         wb_item["r_weibo"] = {}
-        wb_item["remark"] = ""
+        wb_item["remark"] = remark
         wb_item["video_url"] = ""
         wb_item["article_url"] = ""
         wb_item["article_content"] = ""
 
-        if r_href:
+        if retweeted_status:
             # 转发的直接送去入库
-            print("{} 解析完毕".format(wb_item["wb_url"]))
-            logging.debug("{} 解析完毕".format(wb_item["wb_url"]))
+            print("{} 解析完毕:{}".format(wb_item["wb_url"], content[:10]))
+            logging.debug("{} 解析完毕:{}".format(wb_item["wb_url"], content[:10]))
             yield wb_item
         else:
             # 原创的要做字数判断，过长的要单独一个请求获取完整内容
@@ -339,11 +357,18 @@ class WeiboSpiderSpider(scrapy.Spider):
                               cookies=self.cookies, headers=self.blog_headers,
                               meta={"wb_item": wb_item, "count": 0})
             else:
-                print("{} 解析完毕".format(wb_item["wb_url"]))
-                logging.debug("{} 解析完毕".format(wb_item["wb_url"]))
+                print("{} 解析完毕:{}".format(wb_item["wb_url"], content[:10]))
+                logging.debug("{} 解析完毕:{}".format(wb_item["wb_url"], content[:10]))
                 yield wb_item
 
     def parse_comm(self, comm_info: dict, comm_type, superior_id):
+        """
+        从评论dict中解析出需要的字段和下一页评论
+        :param comm_info: 薅来的评论信息
+        :param comm_type: root评论还是child评论
+        :param superior_id: 上级的id
+        :return:
+        """
         comm_item = commentItem()
         this_comm_num = 0
         comm_item["comment_type"] = comm_type
@@ -380,7 +405,7 @@ class WeiboSpiderSpider(scrapy.Spider):
                         "id={}&is_show_bulletin=2&is_mix=1&fetch_level=1&count=20&" \
                         "uid={}&max_id=0".format(comment_id, self.user_id)
             result_list.append(Request(ccomm_url, callback=self.get_ccomm, headers=self.comm_headers,
-                                       cookies=self.cookies, meta={"comm_count": 0, "superior_id": comment_id}))
+                                       cookies=self.cookies, meta={"my_count": 0, "superior_id": comment_id}))
         return result_list
 
     def get_long_text(self, response):
@@ -396,6 +421,9 @@ class WeiboSpiderSpider(scrapy.Spider):
                 content = j_data["data"]["longTextContent"]
                 wb_item["content"] = content
             yield wb_item
+            print("{} 解析完毕:{}".format(wb_item["wb_url"], content[:10]))
+            logging.debug("{} 解析完毕:{}".format(wb_item["wb_url"], content[:10]))
+
         elif j_data["ok"]:
             # 判断是否长微博是用长度判断的，可能出现误判，获取长文本未返回数据
             # 这种情况直接用之前的短文本就行

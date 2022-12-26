@@ -104,9 +104,10 @@ class MergeWbFile:
         # 微博写入到文件
         write_json(wb_list, self.wb_result_filepaht)
         logging.info("整合完成")
-
+        logging.info("共计微博{}条".format(len(wb_list)))
+        print("\n文件保存完毕，共计微博{}条".format(len(wb_list)))
         # 清空临时文件
-        input1 = input("\n文件保存完毕，是否清空临时文件（yes/no）")
+        input1 = input("是否清空临时文件（yes/no）")
         if input1 == "yes":
             log_and_print("清空临时文件")
             for t_filepaht in [self.weibo_filepath, self.rcomm_filepath, self.ccomm_filepath]:
