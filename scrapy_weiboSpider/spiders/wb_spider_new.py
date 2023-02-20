@@ -43,10 +43,8 @@ class WeiboSpiderSpider(scrapy.Spider):
         'sec-fetch-mode': 'cors',
         'sec-fetch-site': 'same-origin',
         'server-version': 'v2022.12.21.1',
-        # 'traceparent': '00-1d62db0b71460593f2e6ec5d84b2afba-772f381549b199dc-00',
         'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.0.0 Safari/537.36',
         'x-requested-with': 'XMLHttpRequest',
-        # 'x-xsrf-token': '3c2juO2PLntF563RcLZo3K81',
     }
     comm_headers = headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:108.0) Gecko/20100101 Firefox/108.0',
@@ -58,22 +56,6 @@ class WeiboSpiderSpider(scrapy.Spider):
         'Sec-Fetch-Dest': 'document',
         'Sec-Fetch-Mode': 'navigate',
     }
-    # comm_headers = {
-    #     'authority': 'weibo.com',
-    #     'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
-    #     'accept-language': 'zh-CN,zh;q=0.9,en;q=0.8,zh-TW;q=0.7',
-    #     'cache-control': 'no-cache',
-    #     'pragma': 'no-cache',
-    #     'sec-ch-ua': '^\\^',
-    #     'sec-ch-ua-mobile': '?0',
-    #     'sec-ch-ua-platform': '^\\^Windows^\\^',
-    #     'sec-fetch-dest': 'document',
-    #     'sec-fetch-mode': 'navigate',
-    #     'sec-fetch-site': 'none',
-    #     'sec-fetch-user': '?1',
-    #     'upgrade-insecure-requests': '1',
-    #     'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36',
-    # }
 
     cookies = comm_tool.cookiestoDic(config["cookies_str"])
 
@@ -98,11 +80,11 @@ class WeiboSpiderSpider(scrapy.Spider):
         if os.path.exists(per_wb_path):
             if "pwb" in saved_key_config or not saved_key_config:
                 file1 = open(per_wb_path, "r", encoding="utf-8").read().strip()
-                tmp_str = "[" + ",".join(file1.split("\n")) + "]"
-                file = json.loads(tmp_str, encoding="utf-8")
-                for x in file:
-                    self.saved_key.append(x["bid"])
-                if file:
+                if file1:
+                    tmp_str = "[" + ",".join(file1.split("\n")) + "]"
+                    file = json.loads(tmp_str, encoding="utf-8")
+                    for x in file:
+                        self.saved_key.append(x["bid"])
                     print("录入 {} 的微博下载记录".format(per_wb_path))
                 else:
                     print("{} 无记录".format(per_wb_path))
