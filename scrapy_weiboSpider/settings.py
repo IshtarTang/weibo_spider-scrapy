@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import json
 from scrapy_weiboSpider.config_path_file import config_path
-from spider_tool import comm_tool
+from gadget import comm_tool
 
 config = json.load(open(config_path, "r", encoding="utf-8"))
 

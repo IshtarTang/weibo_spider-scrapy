@@ -4,12 +4,12 @@
 # # See: https://docs.scrapy.org/en/latest/topics/item-pipeline.html
 
 from scrapy_weiboSpider.items import *
-from spider_tool.comm_tool import get_result_filepath
+from gadget.comm_tool import get_result_filepath
 import json
 import os
 import logging
 from scrapy_weiboSpider.config_path_file import config_path
-from spider_tool import merge_wb
+from gadget import merge_wb
 
 
 def log_and_print(text):

@@ -1,13 +1,13 @@
 {
-  "description": "用户主页爬取模式",
+  "description": "新UI用户主页爬取模式",
   "id": 1,
   "cookies_str": "SINAGLOBAL=9660189142619.871.1625547924755; httpsupgrade_ab=SSL; UOR=,,login.sina.com.cn; wvr=6; wb_timefeed_1748134632=1; SUBP=0033WrSXqPxfM725Ws9jqgMF55529P9D9WFlK8wHn55LiDCvTD8mF1.n5JpX5KMhUgL.Fo2NShnpe0Bce0z2dJLoIpXXeCH8SC-RxbHFSEH8SE-RBEHWBbH8SE-RBEHWBntt; PC_TOKEN=dd185c7b22; ALF=1691458866; SSOLoginState=1659922868; SCF=AsWBxcEA8_DLTQ5GjR5LrGewVJ8Q3NfoF0k7jCICNDnBRpOxYjqXJTzWC018bptHGAQbAEsJlsB6e4Iyb3gVTwY.; SUB=_2A25P9BnlDeRhGedJ71oQ8yrKyD6IHXVsgAwtrDV8PUNbmtAfLRL9kW9NUeseWjqF14xbVrVeZVOjf7OaHZr-Y6zq; _s_tentry=login.sina.com.cn; Apache=564505733893.5966.1659922871180; wb_view_log_1748134632=1536*8641.375; ULV=1659922871229:428:2:1:564505733893.5966.1659922871180:1659681322981; webim_unReadCount=%7B%22time%22%3A1659923236093%2C%22dm_pub_total%22%3A0%2C%22chat_group_client%22%3A0%2C%22chat_group_notice%22%3A0%2C%22allcountNum%22%3A0%2C%22msgbox%22%3A2%7D",
   "print_level": 1,
-  "user_id": "5687069307",
-  "user_name": "etf",
+  "user_id": "000000000000",
+  "user_name": "test",
   "time_range": {
     "enable": 0,
-    "start_time": "2022-01-01 00:00",
+    "start_time": "",
     "stop_time": 0
   },
   "get_comm_num": {

@@ -166,13 +166,12 @@ def get_key_word(config, user_Chinese_symbols=True):
     """
     key_word = ""
     if config["id"] == 1:
-        key_word = ""
         if config["user_name"]:
             key_word += "[" + config["user_name"] + "]"
             key_word += config["user_id"]
         else:
             key_word += config["user_id"]
-        if config["time_range"]["enable"]:
+        if config.get("time_range", {}).get("enable", {}):
             start_time = config["time_range"]["start_time"]
             stop_time = config["time_range"]["stop_time"]
             if user_Chinese_symbols and isinstance(start_time, str):
@@ -184,7 +183,8 @@ def get_key_word(config, user_Chinese_symbols=True):
             if not start_time:
                 start_time = "x"
             key_word += "[{} - {}]".format(start_time, stop_time)
-
+        if config.get("debug", {}).get("on", {}):
+            key_word = "[debug]" + key_word
     elif config["id"] == 2:
         config = config["search_config"]
         key_word = "wb_2_{}".format(config["search_code"])

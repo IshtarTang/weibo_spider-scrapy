@@ -11,8 +11,7 @@ import msvcrt
 import logging
 from scrapy_weiboSpider.items import weiboItem, commentItem
 from scrapy_weiboSpider.config_path_file import config_path
-from spider_tool import comm_tool
-import tool
+from gadget import comm_tool
 
 
 class WeiboSpiderSpider(scrapy.Spider):
@@ -46,7 +45,7 @@ class WeiboSpiderSpider(scrapy.Spider):
         'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.0.0 Safari/537.36',
         'x-requested-with': 'XMLHttpRequest',
     }
-    comm_headers = headers = {
+    comm_headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:108.0) Gecko/20100101 Firefox/108.0',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
         'Accept-Language': 'zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2',
@@ -119,6 +118,14 @@ class WeiboSpiderSpider(scrapy.Spider):
         print("获取到page {} 页面".format(page), end="\t")
         logging.info("获取到page {} ".format(page))
 
+        # debug项，页数限制
+        if self.config.get("debug", {}).get("on", {}):
+            page_limt = self.config["debug"]["page_range"]
+            if page_limt != -1 and page > page_limt:
+                print(f"【debug项】 页数限制{page_limt}，结束获取")
+                logging.info(f"【debug项】 页数限制{page_limt}，结束获取")
+                return
+
         content = response.text
         j_data = json.loads(content)
         meta = response.meta
@@ -158,9 +165,10 @@ class WeiboSpiderSpider(scrapy.Spider):
             for item_or_request in item_and_request_generator:
                 yield item_or_request
 
-    def get_rcomm(self, response):
+    def get_comm(self, response):
         """
-        获取根评论（直接在微博下的评论）
+        root评论和child评论都走这个方法解析&翻页，用meta["comm_type"]区别
+        meta中必须有上级id superior_id 和 评论类型 comm_type
         :param response:
         :return:
         """
@@ -168,56 +176,37 @@ class WeiboSpiderSpider(scrapy.Spider):
         j_data = json.loads(content)
         meta = response.meta
 
-        bid = meta["superior_id"]
-        comms = j_data["data"]
+        superior_id = meta["superior_id"]  # 上级的id
+        comm_type = meta["comm_type"]  # 评论类型
+
+        comms = j_data["data"]  # 获取到的评论数据
         max_id = j_data["max_id"]  # max_id用于获取下一页评论
+
         next_url = ""
+        # 有max_id说明有下一页，把url改成下一页的继续爬
         if max_id:
             o_url = response.request.url
             next_url = o_url.split("&max_id=")[0] + "&max_id=" + str(max_id)
-            next_url = next_url.replace("count=10", "count=20")
-            yield Request(next_url, callback=self.get_ccomm, cookies=self.cookies, headers=self.comm_headers,
-                          meta={"my_count": 0, "superior_id": bid})
-        # 这里要处理能获取到下一页链接，但解析出的评论数量0的问题
+            # 第一轮root评论的count是10，后面的和子评论的count都是20
+            if "count=10" in next_url:
+                next_url = next_url.replace("count=10", "count=20")
+            yield Request(next_url, callback=self.get_comm, cookies=self.cookies, headers=self.comm_headers,
+                          meta={"comm_type": comm_type, "superior_id": superior_id, "my_count": 0})
+
+        # 还没写，这里要处理能获取到下一页链接，但解析出的评论数量0的问题
         if len(comms) == 0 and next_url:
             print(response.url)
             print(next_url)
-            tool.write_json(j_data, "comms.json")
             time.sleep(3)
 
+        # 评论一条一条塞到解析方法里
         for comm in comms:
-            commItem_or_rcommReqs = self.parse_comm(comm, "root", bid)
-            for c_or_i in commItem_or_rcommReqs:
+            commItem_and_rcommReqs = self.parse_comm(comm, comm_type, superior_id)
+            for c_or_i in commItem_and_rcommReqs:
                 yield c_or_i
-        print("获取到rcomm {}条，上级为 {}".format(len(comms), bid))
+        print("获取到rcomm {}条，上级为 {}".format(len(comms), superior_id))
 
-        logging.debug("获取到rcomm {}条，上级为 {}".format(len(comms), bid))
-
-    def get_ccomm(self, response):
-        """
-        获取子评论（对根评论的回复）
-        :param response:
-        :return:
-        """
-        content = response.text
-        j_data = json.loads(content)
-
-        meta = response.meta
-        superior_id = meta["superior_id"]
-        comms = j_data["data"]
-        max_id = j_data["max_id"]
-        if max_id:
-            o_url = response.request.url
-            next_url = o_url.split("&max_id=")[0] + "&max_id=" + str(max_id)
-            yield Request(next_url, callback=self.get_rcomm, cookies=self.cookies, headers=self.comm_headers,
-                          meta={"my_count": 0, "superior_id": superior_id})
-
-        for comm in comms:
-            commItem_or_rcommReqs = self.parse_comm(comm, "child", superior_id)
-            for c_or_i in commItem_or_rcommReqs:
-                yield c_or_i
-        print("获取到ccomm {}条，上级为 {}".format(len(comms), superior_id))
-        logging.debug("获取到ccomm {}条，上级为 {}".format(len(comms), superior_id))
+        logging.debug("获取到rcomm {}条，上级为 {}".format(len(comms), superior_id))
 
     def get_single_wb(self, response):
         """
@@ -283,12 +272,12 @@ class WeiboSpiderSpider(scrapy.Spider):
         wb_item["img_list"] = img_list  # 图片
 
         # 评论详情
-        # if wb_info["comments_count"]:
-        #     comm_url_base = "https://weibo.com/ajax/statuses/buildComments?flow=0&is_reload=1&" \
-        #                     "id={}&is_show_bulletin=2&is_mix=0&count=10&uid={}"
-        #     comm_url = comm_url_base.format(mid, user_id)
-        #     yield Request(comm_url, callback=self.get_rcomm, cookies=self.cookies, headers=self.comm_headers,
-        #                   meta={"my_count": 0, "superior_id": bid})
+        if wb_info["comments_count"]:
+            comm_url_base = "https://weibo.com/ajax/statuses/buildComments?flow=0&is_reload=1&" \
+                            "id={}&is_show_bulletin=2&is_mix=0&count=10&uid={}"
+            comm_url = comm_url_base.format(mid, user_id)
+            yield Request(comm_url, callback=self.get_comm, cookies=self.cookies, headers=self.comm_headers,
+                          meta={"comm_type": "root", "superior_id": bid, "my_count": 0})
         links = []
         if wb_info.get("url_struct", []):
             for url_info in wb_info["url_struct"]:
@@ -345,11 +334,11 @@ class WeiboSpiderSpider(scrapy.Spider):
 
     def parse_comm(self, comm_info: dict, comm_type, superior_id):
         """
-        从评论dict中解析出需要的字段和下一页评论
+        解析评论，把需要的字段做成item，以及构建子评论请求
         :param comm_info: 薅来的评论信息
-        :param comm_type: root评论还是child评论
+        :param comm_type: 评论类型，root或child
         :param superior_id: 上级的id
-        :return:
+        :return: comm_item 和 该评论下子评论的请求
         """
         comm_item = commentItem()
         this_comm_num = 0
@@ -379,15 +368,17 @@ class WeiboSpiderSpider(scrapy.Spider):
             for link_info in links_info:
                 links.append(link_info["ori_url"])
         comm_item["link"] = links
-        result_list = []
+        result_list = []  # 返回值
         result_list.append(comm_item)
         this_comm_num += 1
+        # 是否有子评论，有的话送去请求
         if comm_info.get("comments", []):
             ccomm_url = "https://weibo.com/ajax/statuses/buildComments?is_reload=1&" \
                         "id={}&is_show_bulletin=2&is_mix=1&fetch_level=1&count=20&" \
                         "uid={}&max_id=0".format(comment_id, self.user_id)
-            result_list.append(Request(ccomm_url, callback=self.get_ccomm, headers=self.comm_headers,
-                                       cookies=self.cookies, meta={"my_count": 0, "superior_id": comment_id}))
+            result_list.append(
+                Request(ccomm_url, callback=self.get_comm, headers=self.comm_headers, cookies=self.cookies,
+                        meta={"comm_type": "child", "superior_id": comment_id, "my_count": 0}))
         return result_list
 
     def get_long_text(self, response):

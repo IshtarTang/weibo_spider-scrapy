@@ -16,7 +16,7 @@ import msvcrt
 import logging
 from scrapy_weiboSpider.items import weiboItem, commentItem
 from scrapy_weiboSpider.config_path_file import config_path
-from spider_tool import comm_tool
+from gadget import comm_tool
 
 
 class WeiboSpiderSpider(scrapy.Spider):
