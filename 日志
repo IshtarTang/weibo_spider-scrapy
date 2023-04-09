@@ -77,6 +77,3 @@ parse_weibo_from_div里，长微博改用get_single_wb(scrapy)解析，而不是 rquests_get_
 2022.12.16（新版共用）
 修改了pipline结构：聚合部分代码单独拿出来写了个文件，可以单独运行；删除simple_wb_info.json相关内容。
 
-2023.04.06
-get_rcomm() 和 get_ccomm() 二合一 成 get_comm()
-加了debug功能：页数限制

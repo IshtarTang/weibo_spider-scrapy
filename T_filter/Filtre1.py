@@ -110,6 +110,7 @@ class RFPDupeFilter(BaseDupeFilter):
         str
 
         """
+        # 主要是这里用了自己写的生成key方式
         return request_fingerprint(request)
 
     def close(self, reason=''):
@@ -143,7 +144,7 @@ class RFPDupeFilter(BaseDupeFilter):
             self.logger.debug(msg, {'request': request}, extra={'spider': spider})
             # self.logdupes = False
 
-        # +ԭ����
+        # +ԭ����
         # elif self.logdupes:
         #     msg = ("Filtered duplicate request %(request)s"
         #            " - no more duplicates will be shown"

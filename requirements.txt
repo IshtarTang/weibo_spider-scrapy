@@ -1,9 +1,9 @@
-lxml
+lxml==4.8.0
 parsel
 w3lib
 twisted
 cryptography
-pyOpenSSL
+pyOpenSSL==22.0.0
 requests==2.27.1
 Scrapy== 2.6.1
 Scrapy-Redis==0.6.8
