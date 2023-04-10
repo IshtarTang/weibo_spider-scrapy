@@ -3,6 +3,8 @@ import json
 from scrapy_weiboSpider.config_path_file import config_path
 from gadget import comm_tool
 
+cp = config_path
+
 config = json.load(open(config_path, "r", encoding="utf-8"))
 
 FEED_EXPORT_ENCODING = "gbk"

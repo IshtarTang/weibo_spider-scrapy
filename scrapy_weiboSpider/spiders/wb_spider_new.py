@@ -202,6 +202,15 @@ class WeiboSpiderSpider(scrapy.Spider):
         comm_count += len(comms)
         max_id = j_data["max_id"]  # max_id用于获取下一页评论
 
+        # 评论一条一条塞到解析方法里
+        for comm in comms:
+            commItem_and_rcommReqs = self.parse_comm(comm, superior_id, user_id, comm_type)
+            for c_or_i in commItem_and_rcommReqs:
+                yield c_or_i
+        print("获取到{} comm {}条，上级为 {}".format(comm_type, len(comms), superior_id))
+        logging.debug("获取到{} comm {}条，上级为 {}".format(comm_type, len(comms), superior_id))
+
+        # #### 以下是翻页部分 ##########
         # 确定评论限制多少数量
         comm_limit = sys.maxsize
         comm_limit_config = self.config.get("get_comm_num", {})
@@ -224,30 +233,31 @@ class WeiboSpiderSpider(scrapy.Spider):
         if max_id and (comm_count < comm_limit or comm_limit == -1):
             o_url = response.request.url
             next_url = o_url.split("&max_id=")[0] + "&max_id=" + str(max_id)
-            # 第一轮root评论的count是10，后面的和子评论的count都是20
-            if "count=10" in next_url:
+            if "count=10" in next_url:  # 第一轮root评论的count是10，后面的和子评论的count都是20
                 next_url = next_url.replace("count=10", "count=20")
+            next_meta = {"superior_id": superior_id, "user_id": user_id, "comm_type": comm_type,
+                         "comm_count": comm_count + len(comms), "my_count": 0}
+            # pc端会出现有子评论但是无法完全翻页的状况（有max_id，但是不会返回评论）
+            # 如果出现这种情况就开始在meta计数（不是到会不会有其他情况也这种，总之也多试两次），
+            if len(comms) == 0:
+                failure_max_id = meta.get("failure_max_id", 0)
+                # 试三次就放弃
+                if failure_max_id > 2:
+                    print(f"{superior_id} 下 {comm_type} 评论无法完整获取，评论链接{o_url}")
+                    logging.info(f"{superior_id}下{comm_type}评论无法完整获取，评论链接{o_url}")
+                    return
+                next_meta["failure_max_id"] = failure_max_id + 1
+
             yield Request(next_url, callback=self.get_comm,
-                          meta={"superior_id": superior_id, "user_id": user_id, "comm_type": comm_type,
-                                "comm_count": comm_count + len(comms), "my_count": 0},
-                          dont_filter=True, cookies=self.cookies, headers=self.comm_headers, )
+                          meta=next_meta, dont_filter=True, cookies=self.cookies, headers=self.comm_headers, )
         if comm_count >= comm_limit and comm_limit != -1:
             logging.debug(
                 "{}/{} {}已经获取足够评论条数 get {} limit{}".format(user_id, superior_id, response.url, comm_count, comm_limit))
         # 还没写，这里要处理能获取到下一页链接，但解析出的评论数量0的问题
         if len(comms) == 0 and next_url:
-            logging.warning("评论 {} 未获取到内容，上级链接{}，类型{}，下个链接{}，当前内容 \n{}".
-                            format(response.url, superior_id, comm_type, next_url,
-                                   json.dumps(j_data, indent=4, ensure_ascii=False)))
+            logging.debug("评论 {} 未获取到内容，上级链接{}，类型{}，下个链接{}，当前内容 \n{}".
+                          format(response.url, superior_id, comm_type, next_url, content))
             time.sleep(3)
-
-        # 评论一条一条塞到解析方法里
-        for comm in comms:
-            commItem_and_rcommReqs = self.parse_comm(comm, superior_id, user_id, comm_type)
-            for c_or_i in commItem_and_rcommReqs:
-                yield c_or_i
-        print("获取到{} comm {}条，上级为 {}".format(comm_type, len(comms), superior_id))
-        logging.debug("获取到{} comm {}条，上级为 {}".format(comm_type, len(comms), superior_id))
 
     def get_single_wb(self, response):
         """
@@ -402,7 +412,11 @@ class WeiboSpiderSpider(scrapy.Spider):
         create_datetime = datetime.strptime(created_at, '%a %b %d %X %z %Y')
         create_time = datetime.strftime(create_datetime, "%Y-%m-%d %H:%M")
         comm_item["date"] = create_time
-        comm_item["like_num"] = comm_info["like_counts"]
+        try:
+            comm_item["like_num"] = comm_info["like_counts"]
+        except:
+            comm_item["like_num"] = -1
+            logging.warning(f"点赞解析失败，设为-1，上级id {superior_id},类型 {comm_type}，当前comm {comm_info}")
         comm_item["img_url"] = ""
 
         links = []
