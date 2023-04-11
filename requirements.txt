@@ -1,8 +1,8 @@
 lxml==4.8.0
 parsel
-w3lib
+w3lib==1.22.0
 twisted
-cryptography
+cryptography==36.0.2
 pyOpenSSL==22.0.0
 requests==2.27.1
 Scrapy== 2.6.1

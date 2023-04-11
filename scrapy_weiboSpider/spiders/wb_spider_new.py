@@ -120,8 +120,17 @@ class WeiboSpiderSpider(scrapy.Spider):
 
     def start_requests(self):
         self.start()
+        start_page = 1
+        # 调试项，设定起始页
+        if self.config.get("debug", {}).get("on", {}):
+            debug_start_page = self.config["debug"].get("page_limit", -1)
+            if debug_start_page != -1:
+                start_page = debug_start_page
+                print(f"【debug项】 起始页为 {debug_start_page}，结束获取")
+                logging.info(f"【debug项】 起始页为 {debug_start_page}，结束获取")
+
         start_url = "https://weibo.com/ajax/statuses/mymblog?" \
-                    "uid={}&page={}&feature=0".format(self.user_id, 1)
+                    "uid={}&page={}&feature=0".format(self.user_id, start_page)
         yield Request(start_url, callback=self.del_mymblog,
                       cookies=self.cookies, headers=self.blog_headers, meta={"my_count": 0},
                       dont_filter=True)
@@ -134,9 +143,9 @@ class WeiboSpiderSpider(scrapy.Spider):
         print("已请求page {} 页面".format(page), end="\t")
         logging.info("已请求page {} ".format(page))
 
-        # debug项，页数限制
+        # 调试项，页数限制
         if self.config.get("debug", {}).get("on", {}):
-            page_limt = self.config["debug"]["page_range"]
+            page_limt = self.config["debug"].get("page_limit", -1)
             if page_limt != -1 and page > page_limt:
                 print(f"【debug项】 页数限制{page_limt}，结束获取")
                 logging.info(f"【debug项】 页数限制{page_limt}，结束获取")
@@ -207,8 +216,8 @@ class WeiboSpiderSpider(scrapy.Spider):
             commItem_and_rcommReqs = self.parse_comm(comm, superior_id, user_id, comm_type)
             for c_or_i in commItem_and_rcommReqs:
                 yield c_or_i
-        print("获取到{} comm {}条，上级为 {}".format(comm_type, len(comms), superior_id))
-        logging.debug("获取到{} comm {}条，上级为 {}".format(comm_type, len(comms), superior_id))
+        print("获取到{} comm {} 条，上级为 {}，重试{}次".format(comm_type, len(comms), superior_id,meta.get("failure_max_id", 0)))
+        logging.debug("获取到{} comm {} 条，上级为 {}，重试{}次".format(comm_type, len(comms), superior_id,meta.get("failure_max_id", 0)))
 
         # #### 以下是翻页部分 ##########
         # 确定评论限制多少数量
@@ -241,8 +250,8 @@ class WeiboSpiderSpider(scrapy.Spider):
             # 如果出现这种情况就开始在meta计数（不是到会不会有其他情况也这种，总之也多试两次），
             if len(comms) == 0:
                 failure_max_id = meta.get("failure_max_id", 0)
-                # 试三次就放弃
-                if failure_max_id > 2:
+                # 重复16次，评论到后面要一直往后拿max_id到15次才能获取到有数据的（真的很迷，而且真不是代码的问题，浏览器也这样，留档里放了图）
+                if failure_max_id > 16:
                     print(f"{superior_id} 下 {comm_type} 评论无法完整获取，评论链接{o_url}")
                     logging.info(f"{superior_id}下{comm_type}评论无法完整获取，评论链接{o_url}")
                     return
