@@ -9,6 +9,7 @@ from scrapy import signals
 from scrapy.exceptions import IgnoreRequest
 import json
 import logging
+import time
 
 
 class MyCountDownloaderMiddleware(object):
@@ -23,8 +24,14 @@ class MyCountDownloaderMiddleware(object):
         # 不需检查
         if my_count == -1:
             return response
-
-        j_data = json.loads(response.text)
+        try:
+            j_data = json.loads(response.text)
+        except:
+            # 状态码414，不像是url过长，估计是太频繁了
+            request.meta["my_count"] += 1
+            logging.warning(f"{response.url}解析内容出错，当前文本 {response.text}")
+            time.sleep(3)
+            return request
         # 请求正常，无事发生
         if j_data["ok"] == 1:
             return response

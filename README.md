@@ -28,10 +28,12 @@
 配置文件在configs下，`n1_userWb_config.json`是爬取用户微博的配置文件，改这个就行。
 l开头的为旧版微博配置项，已废弃（除非你能搞到旧版cookies），不用动。
 
+可以在config放多个配置文件，只要按格式写就行，在`scrapy_weiboSpider/config_path_file.py`中设置你要启用的配置文件路径。
+`config_path_file.py`中默认设置是 `./configs/n1_userWb_config.json` ，用之前最好检查下，因为我老是把自己用的文件路径提交上来。
 
-可以在config放多个配置文件，只要按格式写就行，在`scrapy_weiboSpider/config_path_file.py`中设置你要启用的配置文件路径（用之前最好检查下这个，因为我老是把自己用的文件名push上来）。
 
-灰框内为不用动的，蓝框内为基础设置，每个配置文件都有，橙框内为每个模式的功能设置
+
+配置文件中，灰框内为不用动的，蓝框内为基础设置，每个配置文件都有，橙框内为每个模式的功能设置
 
 ![1653041132255](%E7%AC%94%E8%AE%B0%E5%9B%BE/README/1653041132255.png)
 
@@ -63,7 +65,17 @@ l开头的为旧版微博配置项，已废弃（除非你能搞到旧版cookies
 
 `time_range`：只爬取某个时间段的微博，功能未完成。
 
-`get_comm_num`：限制保存多少评论，功能未完成。
+`get_comm_num`：限制保存多少评论，设为 -1 就是保存所有评论。这个功能目前有点问题，可能会限制失败导致爬完所有评论，但是最近没时间修，将就用
+
+​		`wb_rcomm`：爬取每条微博下的多少根评论
+
+​		`wb_ccomm`：爬取每条根评论下的多少子评论
+
+​		若目标用户A转发了B的微博，B这条微博称为源微博（rwb）
+
+​		`rwb_rcomm`：爬取每条源微博下的多少根评论
+
+​		`rwb_ccomm`：爬取源微博每条根评论下的多少子评论
 
 
 
@@ -79,9 +91,13 @@ l开头的为旧版微博配置项，已废弃（除非你能搞到旧版cookies
 
 项目路径下` pip install -r requirements.txt `
 
+
+
+**redis**
+
 程序用到了redis来做进度记录和过滤，下载地址 https://github.com/tporadowski/redis/releases ，我用的版本是3.0.504。
 
-解压后戳`redis-server.exe`，弹出右边的窗口就是启动成功了。
+解压后戳`redis-server.exe`，弹出右边的窗口就是启动成功了，每次运行程序前都要先启动这个。
 
 ![1628613064721](%E7%AC%94%E8%AE%B0%E5%9B%BE/README/1628613064721.png)
 
