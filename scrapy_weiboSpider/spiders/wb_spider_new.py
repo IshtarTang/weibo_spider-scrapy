@@ -123,7 +123,7 @@ class WeiboSpiderSpider(scrapy.Spider):
         start_page = 1
         # 调试项，设定起始页
         if self.config.get("debug", {}).get("on", {}):
-            debug_start_page = self.config["debug"].get("page_limit", -1)
+            debug_start_page = self.config["debug"].get("page_start", -1)
             if debug_start_page != -1:
                 start_page = debug_start_page
                 print(f"【debug项】 起始页为 {debug_start_page}，结束获取")
@@ -143,10 +143,10 @@ class WeiboSpiderSpider(scrapy.Spider):
         print("已请求page {} 页面".format(page), end="\t")
         logging.info("已请求page {} ".format(page))
 
-        # 调试项，页数限制
+        # 调试项，页数限制（这个项改一下判断条件放到最后可以减少一次请求，但是我想放这）
         if self.config.get("debug", {}).get("on", {}):
             page_limt = self.config["debug"].get("page_limit", -1)
-            if page_limt != -1 and page > page_limt:
+            if page_limt != -1 and page >= page_limt:
                 print(f"【debug项】 页数限制{page_limt}，结束获取")
                 logging.info(f"【debug项】 页数限制{page_limt}，结束获取")
                 return
@@ -204,20 +204,22 @@ class WeiboSpiderSpider(scrapy.Spider):
 
         superior_id = meta["superior_id"]  # 上级的id
         user_id = meta["user_id"]  # 用户id
+
         comm_type = meta["comm_type"]  # 评论类型
         comm_count = meta["comm_count"]  # 评论计数
 
         comms = j_data["data"]  # 获取到的评论数据，是个list，一条一个评论
-        comm_count += len(comms)
+        # comm_count += len(comms)
         max_id = j_data["max_id"]  # max_id用于获取下一页评论
-
         # 评论一条一条塞到解析方法里
         for comm in comms:
             commItem_and_rcommReqs = self.parse_comm(comm, superior_id, user_id, comm_type)
             for c_or_i in commItem_and_rcommReqs:
                 yield c_or_i
-        print("获取到{} comm {} 条，上级为 {}，重试{}次".format(comm_type, len(comms), superior_id,meta.get("failure_max_id", 0)))
-        logging.debug("获取到{} comm {} 条，上级为 {}，重试{}次".format(comm_type, len(comms), superior_id,meta.get("failure_max_id", 0)))
+            comm_count += 1  # 确认送去解析再 +1
+        print("获取到{} comm {} 条，上级为 {}，重试{}次".format(comm_type, len(comms), superior_id, meta.get("failure_max_id", 0)))
+        logging.debug(
+            "获取到{} comm {} 条，上级为 {}，重试{}次".format(comm_type, len(comms), superior_id, meta.get("failure_max_id", 0)))
 
         # #### 以下是翻页部分 ##########
         # 确定评论限制多少数量
@@ -236,6 +238,8 @@ class WeiboSpiderSpider(scrapy.Spider):
                     comm_limit = comm_limit_config["rwb_rcomm"]
                 else:
                     comm_limit = comm_limit_config["rwb_ccomm"]
+        print(f"用户id {user_id}，类型 {comm_type}，评论限制{comm_limit}，当前数量{comm_count}，上级 {superior_id}")
+        logging.info(f"用户id {user_id}，类型 {comm_type}，评论限制{comm_limit}，当前数量{comm_count}，上级 {superior_id}")
 
         next_url = ""
         # 有max_id说明有下一页，如果没到限制的数量或者不限制（-1是不限制），把url改成下一页的继续爬
@@ -245,7 +249,7 @@ class WeiboSpiderSpider(scrapy.Spider):
             if "count=10" in next_url:  # 第一轮root评论的count是10，后面的和子评论的count都是20
                 next_url = next_url.replace("count=10", "count=20")
             next_meta = {"superior_id": superior_id, "user_id": user_id, "comm_type": comm_type,
-                         "comm_count": comm_count + len(comms), "my_count": 0}
+                         "comm_count": comm_count, "my_count": 0}
             # pc端会出现有子评论但是无法完全翻页的状况（有max_id，但是不会返回评论）
             # 如果出现这种情况就开始在meta计数（不是到会不会有其他情况也这种，总之也多试两次），
             if len(comms) == 0:
@@ -264,8 +268,10 @@ class WeiboSpiderSpider(scrapy.Spider):
                 "{}/{} {}已经获取足够评论条数 get {} limit{}".format(user_id, superior_id, response.url, comm_count, comm_limit))
         # 还没写，这里要处理能获取到下一页链接，但解析出的评论数量0的问题
         if len(comms) == 0 and next_url:
-            logging.debug("评论 {} 未获取到内容，上级链接{}，类型{}，下个链接{}，当前内容 \n{}".
-                          format(response.url, superior_id, comm_type, next_url, content))
+            logging.warning("评论 {} 未获取到内容，上级链接{}，类型{}，下个链接{}，当前内容 \n{}".
+                            format(response.url, superior_id, comm_type, next_url, content))
+            print("评论 {} 未获取到内容，上级链接{}，类型{}，下个链接{}，当前内容 \n{}".
+                  format(response.url, superior_id, comm_type, next_url, content))
             time.sleep(3)
 
     def get_single_wb(self, response):
@@ -293,6 +299,8 @@ class WeiboSpiderSpider(scrapy.Spider):
             bid = wb_info["mblogid"]
         except:
             # bid获取不到说明这条微博完全无法看到
+            print("出现完全无法解析的微博，详见日志")
+            logging.warning(f"出现完全无法解析的微博，上阶段信息{wb_info}")
             return
         wb_item["bid"] = bid  # bid，微博的标识
 
@@ -331,8 +339,15 @@ class WeiboSpiderSpider(scrapy.Spider):
             img_list.append(wimg_url)
         wb_item["img_list"] = img_list  # 图片
 
+        # 是否获取评论
+        is_get_comm = 0
+        comm_configs = self.config["get_comm_num"]
+        for comm_config_key in comm_configs:
+            if comm_configs[comm_config_key] != 0:
+                is_get_comm = 1
+                break
         # 评论详情
-        if wb_info["comments_count"]:
+        if is_get_comm and wb_info["comments_count"]:
             comm_url_base = "https://weibo.com/ajax/statuses/buildComments?flow=0&is_reload=1&" \
                             "id={}&is_show_bulletin=2&is_mix=0&count=10&uid={}"
             comm_url = comm_url_base.format(mid, user_id)
@@ -398,9 +413,9 @@ class WeiboSpiderSpider(scrapy.Spider):
         """
         解析评论，把需要的字段做成item，以及构建子评论请求
         :param comm_info: 薅来的评论信息
-        :param comm_type: 评论类型，root或child
         :param superior_id: 上级的id
-        :return: comm_item 和 该评论下子评论的请求
+        :param user_id: 该微博的userid
+        :param comm_type: 评论类型，root或child
         """
         comm_item = commentItem()
         this_comm_num = 0
@@ -437,8 +452,15 @@ class WeiboSpiderSpider(scrapy.Spider):
         result_list = []  # 返回值
         result_list.append(comm_item)
         this_comm_num += 1
-        # 是否有子评论，有的话送去请求
-        if comm_info.get("comments", []):
+        # 是否要获取子评论
+        if comm_type == "wb_rcomm":
+            ccomm_limit = self.config["get_comm_num"]["wb_ccomm"]
+        elif comm_type == "rwb_rcomm":
+            ccomm_limit = self.config["get_comm_num"]["rwb_ccomm"]
+        else:
+            ccomm_limit = 0
+        # 是否有子评论，有的且需要的话送去请求
+        if comm_info.get("comments", []) and ccomm_limit:
             ccomm_url = "https://weibo.com/ajax/statuses/buildComments?is_reload=1&" \
                         "id={}&is_show_bulletin=2&is_mix=1&fetch_level=1&count=20&" \
                         "uid={}&max_id=0".format(comment_id, self.user_id)
