@@ -103,7 +103,8 @@ class ScrapyWeibospiderPipeline(object):
             with open(path1, "w", encoding="utf-8") as op:
                 op.write("\n".join(new_lines))
         user_id = self.config["user_id"]
-        merge_wb_file = merge_wb.MergeWbFile(self.filedir, user_id)
+        # 主要是这调了方法
+        merge_wb_file = merge_wb.MergeWbFile(self.filedir, user_id, self.config.get("get_rwb_detail", 1))
         merge_wb_file.run()
 
     def init_file(self):

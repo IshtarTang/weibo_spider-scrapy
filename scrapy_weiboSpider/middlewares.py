@@ -39,8 +39,8 @@ class MyCountDownloaderMiddleware(object):
         if my_count < 5:
             # 失败次数不超过5，+1重试
             request.meta["my_count"] += 1
-            logging.info("{} 重新获取{}次".format(request.url, request.meta["my_count"]))
-            print("{} 重新获取{}次".format(request.url, request.meta["my_count"]))
+            logging.info("请求中data无效，{} 已重新获取{}次".format(request.url, request.meta["my_count"]))
+            print("请求中data无效，{} 已重新获取{}次".format(request.url, request.meta["my_count"]))
             return request
         else:
             if request.url == response.url:

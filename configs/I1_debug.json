@@ -1,29 +1,29 @@
 {
-    "description": "用户主页爬取模式",
-    "mode": 1,
-    "cookies_str": "SINAGLOBAL=5099002790593.161.1676951216879; UOR=,,login.sina.com.cn; XSRF-TOKEN=FqpUjKsCru_pO4jR2VT1XuvA; _s_tentry=weibo.com; Apache=794274306240.8586.1680770566548; ULV=1680770566566:6:1:1:794274306240.8586.1680770566548:1679932099939; login_sid_t=de2f78b801e1c3aee6770fa2c3872753; cross_origin_proto=SSL; SSOLoginState=1680871930; WBPSESS=70AlSVZcFbZ5lizvBDd0tDFKRXbmy4RfksqaNBHBn_E9dIVJDMftn1umvYAQyR6sF6pn4Tm5TJ-Dua93XamQPlFnQqYv3Ok7DbIXsU0XE6KSmNR9EWY1j9tPJfgtVKK2FEtmwnSwTWFQzhfh8UFOQA==; SUBP=0033WrSXqPxfM725Ws9jqgMF55529P9D9WFgpqB02S8a2UJmEK1y8vEg5JpX5KMhUgL.Foqf1K2ce0n4eon2dJLoI7fJUPxfMJHkqcvEMGSL; ALF=1683641955; SCF=AgQL8ho8S9VCgxHBFSlHE6KWEaQJeYzc4ESBw87Pq7JKG_1rEpftmsQ61CAUk0mH2afIa2DPzOwLdLebawaOmJQ.; SUB=_2A25JNrk1DeRhGeBL4lMX8ybFyTSIHXVqRa39rDV8PUNbmtAbLWTfkW9NRte-qZycUrMm7Rmb8rdwmxZ2hh2jSfNn",
-    "print_level": 1,
-    "id": 1,
-    "user_id": "0000000000",
-    "user_name": "test",
-    "time_range": {
-        "enable": 0,
-        "start_time": 0,
-        "stop_time": 0
-    },
-    "get_comm_num": {
-        "wb_rcomm": 40,
-        "wb_ccomm": 5,
-        "rwb_rcomm": 0,
-        "rwb_ccomm": 0
-    },
-    "debug": {
-        "description": "这里面的配置是方便debug用的，正常使用时不要使用带debug项的配置文件",
-        "page_range": "1-31",
-        "saved_key_file": [
-            "pwb",
-            "wb",
-            "rwb"
-        ]
-    }
+  "description": "用户主页爬取模式",
+  "mode": 1,
+  "cookies_str": "",
+  "print_level": 1,
+  "id": 1,
+  "user_id": "0000000000",
+  "user_name": "test",
+  "time_range": {
+    "enable": 0,
+    "start_time": 0,
+    "stop_time": 0
+  },
+  "get_comm_num": {
+    "wb_rcomm": 40,
+    "wb_ccomm": 5,
+    "rwb_rcomm": 0,
+    "rwb_ccomm": 0
+  },
+  "debug": {
+    "description": "这里面的配置是方便debug用的，正常使用时不要使用带debug项的配置文件",
+    "page_range": "1-31",
+    "saved_key_file": [
+      "pwb",
+      "wb",
+      "rwb"
+    ]
+  }
 }

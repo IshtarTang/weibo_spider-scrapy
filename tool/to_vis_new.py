@@ -7,7 +7,7 @@ import os
 #
 # ##################
 
-filename = "all_wb.json"
+filename = "wb_result.json"
 vis_filename = "vis_" + filename
 file = json.load(open(filename, "r", encoding="utf-8"))
 n_wb_list = []

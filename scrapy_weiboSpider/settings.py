@@ -57,6 +57,8 @@ SPIDER_MIDDLEWARES = {
 }
 DOWNLOADER_MIDDLEWARES = {
     'scrapy_weiboSpider.middlewares.ScrapyWeibospiderDownloaderMiddleware': 543,
+    'scrapy_weiboSpider.middlewares.MyCountDownloaderMiddleware': 542,
+
 }
 ITEM_PIPELINES = {
     'scrapy_weiboSpider.pipelines.ScrapyWeibospiderPipeline': 300,

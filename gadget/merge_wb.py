@@ -12,7 +12,7 @@ def log_and_print(text):
 
 
 class MergeWbFile:
-    def __init__(self, filedir, main_user_id):
+    def __init__(self, filedir, main_user_id, is_simple_r_wb=0):
         """
         :param filedir: 爬虫结果文件的路径，在pipline里调用是从项目路径开始算
         """
@@ -25,7 +25,10 @@ class MergeWbFile:
         self.ccomm_filepath = self.pre_file_path + "/ccomm.txt"
         # 结果文件路径
         self.wb_result_filepaht = self.filedir + "/wb_result.json"
-        self.r_wb_result_filepaht = self.filedir + "/r_wb_result.json"
+        if is_simple_r_wb:
+            self.r_wb_result_filepaht = self.filedir + "/r_wb_result.json"
+        else:
+            self.r_wb_result_filepaht = self.filedir + "/sr_wb_result.json"
 
     def run(self):
         logging.info("文件整合开始")

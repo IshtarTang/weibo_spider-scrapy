@@ -126,16 +126,16 @@ class WeiboSpiderSpider(scrapy.Spider):
             debug_start_page = self.config["debug"].get("page_start", -1)
             if debug_start_page != -1:
                 start_page = debug_start_page
-                print(f"【debug项】 起始页为 {debug_start_page}，结束获取")
-                logging.info(f"【debug项】 起始页为 {debug_start_page}，结束获取")
+                print(f"【debug项】 起始页为 {debug_start_page}")
+                logging.info(f"【debug项】 起始页为 {debug_start_page}")
 
         start_url = "https://weibo.com/ajax/statuses/mymblog?" \
                     "uid={}&page={}&feature=0".format(self.user_id, start_page)
-        yield Request(start_url, callback=self.del_mymblog,
+        yield Request(start_url, callback=self.del_mymblog_page,
                       cookies=self.cookies, headers=self.blog_headers, meta={"my_count": 0},
                       dont_filter=True)
 
-    def del_mymblog(self, response):
+    def del_mymblog_page(self, response):
         """
         用户主页的数据
         """
@@ -159,15 +159,16 @@ class WeiboSpiderSpider(scrapy.Spider):
         if since_id:
             next_url = "https://weibo.com/ajax/statuses/mymblog?" \
                        "uid={}&page={}&feature=0&since_id={}".format(self.user_id, page + 1, since_id)
-            yield Request(next_url, callback=self.del_mymblog, meta={"my_count": 0},
+            yield Request(next_url, callback=self.del_mymblog_page, meta={"my_count": 0},
                           dont_filter=True, priority=1, cookies=self.cookies, headers=self.blog_headers)
         # 网络出问题时有可能获取不到下一页
         elif meta["my_count"] < 5:
+            print("当前页数{}，翻页失败{}次，继续尝试翻页".format(page, meta["my_count"]))
             request = response.request
             request.meta["my_count"] += 1
             yield request
         else:
-            print("页数{} 后面没了".format(page))
+            print("当前页数{}，翻页失败{}次，结束尝试".format(page, meta["my_count"]))
 
         # 是否正常获取到正文
         if not j_data.get("data", {}).get("list", []):
@@ -181,12 +182,12 @@ class WeiboSpiderSpider(scrapy.Spider):
                 print("page{} 获取失败".format(page))
             return
 
-        # 解析微博
+        # 解析
         wb_list = j_data["data"]["list"]
-        print("页面正常，本页共微博微博{}条，开始解析".format(page, len(wb_list)))
-        # 循环微博，解析
+        print("页面正常，本页共微博微博{}条，开始解析".format(len(wb_list)))
+        # 循环，塞方法里解析
         for wb_info in wb_list:
-            item_and_request_generator = self.parse_wb(wb_info)
+            item_and_request_generator = self.parse_wb(wb_info, self.config.get("get_rwb_detail", 1))
             for item_or_request in item_and_request_generator:
                 yield item_or_request
 
@@ -251,7 +252,7 @@ class WeiboSpiderSpider(scrapy.Spider):
             next_meta = {"superior_id": superior_id, "user_id": user_id, "comm_type": comm_type,
                          "comm_count": comm_count, "my_count": 0}
             # pc端会出现有子评论但是无法完全翻页的状况（有max_id，但是不会返回评论）
-            # 如果出现这种情况就开始在meta计数（不是到会不会有其他情况也这种，总之也多试两次），
+            # 如果出现这种情况就开始在meta计数（不知道会不会有其他情况也这种，总之也多试两次），
             if len(comms) == 0:
                 failure_max_id = meta.get("failure_max_id", 0)
                 # 重复16次，评论到后面要一直往后拿max_id到15次才能获取到有数据的（真的很迷，而且真不是代码的问题，浏览器也这样，留档里放了图）
@@ -276,40 +277,39 @@ class WeiboSpiderSpider(scrapy.Spider):
 
     def get_single_wb(self, response):
         """
-        单条微博正文解析
+        获取单条微博
         :param response:
         :return:
         """
         content = response.text
         wb_info = json.loads(content, encoding="utf-8")
-        item_and_request = self.parse_wb(wb_info)
+        item_and_request = self.parse_wb(wb_info, self.config.get("get_rwb_detail", 1))
         for i_or_r in item_and_request:
             yield i_or_r
 
-    def parse_wb(self, wb_info: dict):
+    def parse_wb_simple(self, wb_info, wb_item, owb_url=""):
         """
-        从响应的json里把需要的部分扣出来，做成item
-        把评论请求搞出来
-        :param wb_info:
-        :return:
+        解析微博信息的一部分，可以是一条完整的也可以是转发页retweeted_status里的
+        :param wb_info:从微博那扣来的，可以是完整信息
+        :param wb_item:  wb_itme
+        :return:加了解析出内容的wb_item
         """
-        remark = ""
-        wb_item = weiboItem()
+        wb_item["remark"] = ""
+
         try:
             bid = wb_info["mblogid"]
+            wb_item["bid"] = bid  # bid，微博的标识
+            user_id = wb_info["user"]["idstr"]
+            wb_item["user_id"] = user_id  # 用户id
         except:
-            # bid获取不到说明这条微博完全无法看到
+            # bid和用户id获取不到说明这条微博完全无法看到
             print("出现完全无法解析的微博，详见日志")
             logging.warning(f"出现完全无法解析的微博，上阶段信息{wb_info}")
             return
-        wb_item["bid"] = bid  # bid，微博的标识
-
-        user_id = wb_info["user"]["idstr"]
-        wb_item["user_id"] = user_id  # 用户id
 
         wb_item["wb_url"] = "https://weibo.com/{}/{}".format(wb_item["user_id"], wb_item["bid"])
         wb_item["user_name"] = wb_info["user"]["screen_name"]  # 用户名
-        html_text = wb_info["text_raw"]  # html格式的微博正文
+        html_text = wb_info["text_raw"]  # 微博正文
         content_parse = etree.HTML(html_text)
         content = "\n".join(content_parse.xpath("//text()"))
         wb_item["content"] = content  # 微博正文
@@ -324,20 +324,58 @@ class WeiboSpiderSpider(scrapy.Spider):
         wb_item["like_num"] = wb_info["attitudes_count"]  # 点赞数（含评论点赞）
         wb_item["forward_num"] = wb_info["reposts_count"]  # 转发数
         wb_item["comment_num"] = wb_info["comments_count"]  # 评论数
-        share_repost_type = wb_info["share_repost_type"]
-        wb_item["is_original"] = 0 if share_repost_type else 1  # 是否远程
         wb_item["weibo_from"] = wb_info["source"]  # 微博来源
 
         mid = wb_info["mid"]  # 微博的数字编号，拿图片/评论会用到
-
+        # 获取图片
         img_list = []
-        pic_ids = wb_info["pic_ids"]
+        pic_ids = wb_info.get("pic_ids", [])
         wimg_url_base = "https://photo.weibo.com/{}/wbphotos/large/mid/{}/pid/{}"
 
         for pid in pic_ids:
             wimg_url = wimg_url_base.format(user_id, mid, pid)
             img_list.append(wimg_url)
         wb_item["img_list"] = img_list  # 图片
+
+        # 链接
+        links = []
+        if wb_info.get("url_struct", []):
+            for url_info in wb_info["url_struct"]:
+                links.append(url_info["ori_url"])
+        wb_item["links"] = links
+
+        # 这些在完全解析里有，只走simple就需要补上这些
+        wb_item["r_href"] = ""
+
+        # 这些是
+        wb_item["t_bid"] = ""
+        wb_item["r_weibo"] = {}
+        wb_item["video_url"] = ""
+        wb_item["article_url"] = ""
+        wb_item["article_content"] = ""
+
+        retweeted_status = wb_info.get("retweeted_status", 0)
+        wb_item["is_original"] = 0 if retweeted_status else 1  # 是否原创
+
+        return wb_item
+
+    def parse_wb(self, wb_info: dict, get_rwb_detail):
+        """
+        从响应的json里把需要的部分扣出来，做成item
+        :param wb_info:
+        :param get_rwb_detail: 要不要搞完整的源微博数据
+        :return:
+        """
+        wb_item = weiboItem()
+
+        wb_item = self.parse_wb_simple(wb_info, wb_item)
+        if not wb_item:
+            # 没获取到bid才会返回空，说明这条微博完全获取不到
+            return
+
+        user_id = wb_item["user_id"]
+        bid = wb_item["bid"]
+        mid = wb_info["mid"]  # 微博的数字编号，拿图片/评论会用到
 
         # 是否获取评论
         is_get_comm = 0
@@ -355,49 +393,49 @@ class WeiboSpiderSpider(scrapy.Spider):
                           meta={"superior_id": bid, "user_id": user_id, "comm_type": "root",
                                 "comm_count": 0, "my_count": 0},
                           cookies=self.cookies, headers=self.comm_headers, dont_filter=True)
-        links = []
-        if wb_info.get("url_struct", []):
-            for url_info in wb_info["url_struct"]:
-                links.append(url_info["ori_url"])
-        wb_item["links"] = links
 
-        retweeted_status = wb_info.get("retweeted_status", 0)
         # 是否是转发微博，转发的记录r_href，源微博送去单条解析
-        # 要处理这种能看见转发但原博不可阅读的：https://weibo.com/6591638928/IpXyxmLuO
-        if retweeted_status:
-            r_bid = wb_info["retweeted_status"]["mblogid"]
+        r_href = ""
+        if not wb_item["is_original"]:  # 是一条转发微博
+            r_bid = ""
+            r_user = ""
             try:
-                r_user = wb_info["retweeted_status"]["user"]["idstr"]
+                r_bid = wb_info["retweeted_status"].get("mblogid", "")  # 源微博bid
+                r_user = wb_info["retweeted_status"].get("user", {}).get("idstr", "")  # 源微博用户id
+            except:
+                wb_item["remark"] += "无法获取源微博"
+
+            if r_bid and r_user:  # 这两都有说明源微博可见
                 r_wb_url = "https://weibo.com/{}/{}".format(r_user, r_bid)
                 r_href = "/{}/{}".format(r_user, r_bid)
                 r_info_url = "https://weibo.com/ajax/statuses/show?id=" + r_bid
-                print("{}的源微博为 {}".format(wb_item["wb_url"], r_wb_url))
-                yield Request(r_info_url, callback=self.get_single_wb, cookies=self.cookies, headers=self.blog_headers,
-                              meta={"count": 0}, dont_filter=True)
-            except:
-                remark += "无法获取源微博"
-                r_href = ""
-
-        else:
-            r_href = ""
+                if get_rwb_detail:  # 是否获取源微博详情，默认获取，进行一次请求
+                    print("{}的源微博为 {}，准备进行详细解析".format(wb_item["wb_url"], r_wb_url))
+                    yield Request(r_info_url, callback=self.get_single_wb, cookies=self.cookies,
+                                  headers=self.blog_headers,
+                                  meta={"count": 0}, dont_filter=True)
+                else:  # 源微博走简单解析
+                    print("{}的源微博为 {}，准备进行simple parse".format(wb_item["wb_url"], r_wb_url))
+                    wb_item["remark"] += "设置为不获取详细源微博"
+                    r_wb_item = self.parse_wb_simple(wb_info["retweeted_status"], weiboItem(), wb_item["wb_url"])
+                    yield r_wb_item
 
         # 暂且不写
         wb_item["t_bid"] = ""
         wb_item["r_href"] = r_href
         wb_item["r_weibo"] = {}
-        wb_item["remark"] = remark
         wb_item["video_url"] = ""
         wb_item["article_url"] = ""
         wb_item["article_content"] = ""
 
-        if retweeted_status:
-            # 转发的直接送去入库
-            print("{} 解析完毕:{}".format(wb_item["wb_url"], content[:10]))
-            logging.debug("{} 解析完毕:{}".format(wb_item["wb_url"], content[:10]))
+        if not wb_item["is_original"]:
+            # 转发的不会超过字数，直接送去入库
+            print("{} r解析完毕:{}".format(wb_item["wb_url"], wb_item["content"][:10]))
+            logging.debug("{} r解析完毕:{}".format(wb_item["wb_url"], wb_item["content"][:10]))
             yield wb_item
         else:
             # 原创的要做字数判断，过长的要单独一个请求获取完整内容
-            text_len = wb_info.get("textLength")
+            text_len = wb_info.get("textLength", 240)
             # 字数超过的送到获取长文的地方去，原content会被覆盖
             if text_len >= 240:
                 longtext_url = "https://weibo.com/ajax/statuses/longtext?id={}".format(bid)
@@ -405,8 +443,8 @@ class WeiboSpiderSpider(scrapy.Spider):
                               cookies=self.cookies, headers=self.blog_headers,
                               meta={"wb_item": wb_item, "count": 0}, dont_filter=True)
             else:
-                print("{} 解析完毕:{}".format(wb_item["wb_url"], content[:10]))
-                logging.debug("{} 解析完毕:{}".format(wb_item["wb_url"], content[:10]))
+                print("{} 解析完毕:{}".format(wb_item["wb_url"], wb_item["content"][:10]))
+                logging.debug("{} 解析完毕:{}".format(wb_item["wb_url"], wb_item["content"][:10]))
                 yield wb_item
 
     def parse_comm(self, comm_info: dict, superior_id, user_id, comm_type):
