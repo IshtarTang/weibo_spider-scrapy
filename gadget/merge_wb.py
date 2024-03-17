@@ -14,7 +14,10 @@ def log_and_print(text):
 class MergeWbFile:
     def __init__(self, filedir, main_user_id, is_simple_r_wb=0):
         """
-        :param filedir: 爬虫结果文件的路径，在pipline里调用是从项目路径开始算
+
+        :param filedir: 爬虫结果文件的路径，从项目路径开始算的相对路径 file/key_word
+        :param main_user_id: 爬的谁的主页，用来区分是不是被转发的别人的微博
+        :param is_simple_r_wb: 被转发的源微博是否只获取简单内容，详细源微博和简单源微博结果文件路径不同
         """
         self.main_user_id = main_user_id
         self.filedir = filedir
@@ -69,8 +72,9 @@ class MergeWbFile:
                 rcomm["child_comm"] = []
         rcomm_dicts = classify_dicts(rcomm_dicts, "superior_id")
 
-        # 排序，将评论插入到微博中
+        # 微博按时间排序
         all_wb_dict = sort_dict(wb_dict, "public_timestamp", False)
+        # 将评论插入到微博中
         for wb in all_wb_dict:
             if rcomm_dicts.__contains__(wb["bid"]):
                 wb["comments"] = rcomm_dicts[wb["bid"]]
@@ -165,7 +169,7 @@ def classify_dicts(dict_list, classify_key):
     return classified_dict
 
 
-def sort_dict(dicts: list, sort_by, reverse=False):
+def sort_dict(dicts, sort_by, reverse=False):
     """
     给一堆dict排序。一开始想到了pandas，不过试了下直接写的快一些
     :param dicts 列表，列表里是格式相同的字典
@@ -208,6 +212,10 @@ def drop_duplicate(dicts: list, d_key):
     f_dict = {}  # {d_key的值：dict}，
     for dict1 in dicts:
         # 如果两个dict的d_key的值相同，后面的会把前面的覆盖掉
+        if f_dict.get(dict1[d_key], ""):
+            logging.debug(f"mewge_wb.py line:216 过滤 {dict1[d_key]}")
         f_dict[dict1[d_key]] = dict1
 
     return [f_dict[key] for key in f_dict.keys()]
+
+

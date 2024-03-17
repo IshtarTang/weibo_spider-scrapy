@@ -91,7 +91,7 @@ class ScrapyWeibospiderPipeline(object):
         self.rcomm_file.close()
         self.ccomm_file.close()
 
-        # 简单去重，感觉应该加个按时间排序什么的方便检查，但是懒得写
+        # 只去除完全重复的行，并且写回去，如果是bid相同但有些内容(比如点赞数)不同不用处理，保留旧版本数据
         for path1 in [self.ccomm_filepath, self.rcomm_filepath, self.weibo_filepath]:
             with open(path1, "r", encoding="utf-8") as op:
                 file = op.read()

@@ -5,12 +5,19 @@ from datetime import datetime
 import json
 import time
 import sys
+import re
 from lxml.html import etree
 from scrapy import Request
 import msvcrt
 import logging
 from scrapy_weiboSpider.items import weiboItem, commentItem
 from gadget import comm_tool
+from scrapy_weiboSpider.config_path_file import config_path
+
+
+def timestamp_to_str(timestamp):
+    return time.strftime("%Y-%m-%d %H:%M:%S",
+                         time.localtime(timestamp / 1000))
 
 
 class WeiboSpiderSpider(scrapy.Spider):
@@ -23,10 +30,11 @@ class WeiboSpiderSpider(scrapy.Spider):
     name = 'new_wb_spider'
     allowed_domains = ['weibo.com']
 
-    from scrapy_weiboSpider.config_path_file import config_path
     config = json.load(open(config_path, "r", encoding="utf-8"))
     user_id = config["user_id"]
     key_word = comm_tool.get_key_word(config)
+    per_wb_path = "./file" + "/" + key_word + "/prefile/weibo.txt"
+    wb_time_start_limit = 0
     saved_key = []
     blog_headers = {
         'authority': 'weibo.com',
@@ -87,22 +95,21 @@ class WeiboSpiderSpider(scrapy.Spider):
             print("    {}:{}".format(comm_config_str[comm_config],
                                      get_comm_num if get_comm_num != -1 else "all"))
 
-        # 录入之前的下载记录，避免重复爬取
-        per_wb_path = "./file" + "/" + self.key_word + "/prefile/weibo.txt"
+        # 录入之前的下载记录，打印输出（想搞避免重复爬取，但是用saved_key的没搞，目前只是一个计数的打印）
         saved_key_config = self.config.get("deubg", {}).get("saved_key_file", "")
         ########################
         # 在这里加扫描记录功能
-        if os.path.exists(per_wb_path):
+        if os.path.exists(self.per_wb_path):
             if "pwb" in saved_key_config or not saved_key_config:
-                file1 = open(per_wb_path, "r", encoding="utf-8").read().strip()
+                file1 = open(self.per_wb_path, "r", encoding="utf-8").read().strip()
                 if file1:
                     tmp_str = "[" + ",".join(file1.split("\n")) + "]"
                     file = json.loads(tmp_str, encoding="utf-8")
                     for x in file:
                         self.saved_key.append(x["bid"])
-                    print("录入 {} 的微博下载记录".format(per_wb_path))
+                    print("录入 {} 的微博下载记录".format(self.per_wb_path))
                 else:
-                    print("{} 无记录".format(per_wb_path))
+                    print("{} 无记录".format(self.per_wb_path))
 
         self.saved_key = list(set(self.saved_key))
         if self.saved_key:
@@ -110,13 +117,35 @@ class WeiboSpiderSpider(scrapy.Spider):
         else:
             print("未读取到上次的记录")
 
+        time_limit_config = self.config.get("time_limit", 0)
+        # 只获取 now - 设定时间的微博
+        if time_limit_config == "auto":  # 自动模式，读取之前获取的最后一条微博时间，此前的微博不再次获取
+            self.wb_time_start_limit = comm_tool.get_last_wb_public_time(self.per_wb_path, self.user_id)
+            if self.wb_time_start_limit == 0:  # 没有进度文件
+                print("已启动自动时间限制，未检查到记录文件，将获取所有微博")
+            else:  # 有进度文件
+                wb_time_start_limit_str = time.strftime("%Y-%m-%d %H:%M:%S",
+                                                        time.localtime(self.wb_time_start_limit / 1000))
+                print(f"已启动自动时间限制，本次将获取 now - {wb_time_start_limit_str} 的微博到文件中")
+        elif re.search("[12]\d\d\d-[012]\d-[01 23]\d [012]\d:[012345]\d",
+                       str(time_limit_config)):  # 手动模式，yyyy-mm-dd hh:MM格式
+            self.wb_time_start_limit = int(time.mktime(time.strptime(time_limit_config, "%Y-%m-%d %H:%M")) * 1000)
+            print(f"已启动手动时间限制，配置类型str，本次将获取 now - {time_limit_config} 的微博到文件中")
+        elif type(time_limit_config) == int:  # 手动模式，毫秒级时间戳
+            self.wb_time_start_limit = time_limit_config
+            wb_time_start_limit_str = \
+                time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(self.wb_time_start_limit / 1000))
+            print(f"已启动手动时间限制，配置类型毫秒时间戳，本次将获取 now - {wb_time_start_limit_str} 的微博到文件中")
+        else:
+            self.wb_time_start_limit = 0
+            print(f"配置项 时间限制 {time_limit_config} 无效")
+        print(self.wb_time_start_limit)
         print("请确认redis已启动，按任意键继续，或Esc以退出")
-        if not self.saved_key:
-            x = ord(msvcrt.getch())
-            if x == 27:
-                print("程序退出")
-                logging.info("主动退出")
-                os._exit(0)
+        x = ord(msvcrt.getch())
+        if x == 27:
+            print("程序退出")
+            logging.info("主动退出")
+            os._exit(0)
 
     def start_requests(self):
         self.start()
@@ -143,7 +172,12 @@ class WeiboSpiderSpider(scrapy.Spider):
         print("已请求page {} 页面".format(page), end="\t")
         logging.info("已请求page {} ".format(page))
 
-        # 调试项，页数限制（这个项改一下判断条件放到最后可以减少一次请求，但是我想放这）
+        content = response.text
+        j_data = json.loads(content)
+        meta = response.meta
+        wb_list = j_data["data"]["list"]
+
+        # 调试项，页数限制
         if self.config.get("debug", {}).get("on", {}):
             page_limt = self.config["debug"].get("page_limit", -1)
             if page_limt != -1 and page >= page_limt:
@@ -151,9 +185,23 @@ class WeiboSpiderSpider(scrapy.Spider):
                 logging.info(f"【debug项】 页数限制{page_limt}，结束获取")
                 return
 
-        content = response.text
-        j_data = json.loads(content)
-        meta = response.meta
+        # 时间限制，找最新一条微博，要略过置顶
+        current_page_latest_wb = {}
+        for wb in wb_list:
+            if wb.get("isTop", 0):
+                pass
+            else:
+                current_page_latest_wb = wb
+                break
+        current_page_latest_public_time = current_page_latest_wb.get("created_at", 0)
+        create_datetime = datetime.strptime(current_page_latest_public_time, '%a %b %d %X %z %Y')
+        current_page_latest_timestamp = int(time.mktime(create_datetime.timetuple()) * 1000)  # 发表时间的时间戳
+
+        if self.wb_time_start_limit != 0 and current_page_latest_timestamp <= self.wb_time_start_limit:
+            print("时间限制{}，当前页面最新微博时间 {}，主页获取结束".format(
+                timestamp_to_str(self.wb_time_start_limit), timestamp_to_str(current_page_latest_timestamp)))
+            return
+
         # 下一页
         since_id = j_data["data"]["since_id"]
         if since_id:
@@ -183,7 +231,6 @@ class WeiboSpiderSpider(scrapy.Spider):
             return
 
         # 解析
-        wb_list = j_data["data"]["list"]
         print("页面正常，本页共微博微博{}条，开始解析".format(len(wb_list)))
         # 循环，塞方法里解析
         for wb_info in wb_list:

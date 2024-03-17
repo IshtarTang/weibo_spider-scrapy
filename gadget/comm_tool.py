@@ -1,6 +1,8 @@
 import time
 import os
 import re
+import json
+from gadget import merge_wb
 
 
 def cookiestoDic(str1):
@@ -203,3 +205,24 @@ def get_result_filepath(config):
     key_word = get_key_word(config)
     path = "file/" + key_word
     return path
+
+
+def get_last_wb_public_time(wb_file_path, user_id):
+    """
+    给一个prefile/weibo.txt路径 和 用户id，找出文件里这个用户最晚一条微博的时间
+    :param wb_file_path: prefile/weibo.txt路径
+    :param user_id: 用户id
+    :return:
+    """
+    if not os.path.exists(wb_file_path):
+        return 0
+    with open(wb_file_path, "r", encoding="utf-8") as op:
+        file = op.read()
+    lines = file.strip().split("\n")
+    try:
+        wbs = map(lambda line: json.loads(line), lines)
+        wbs = filter(lambda wb: wb["user_id"] == user_id, wbs)
+        wbs = merge_wb.sort_dict(wbs, "public_time", True)
+        return wbs[0]["public_timestamp"]
+    except:
+        return 0

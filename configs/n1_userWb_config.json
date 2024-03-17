@@ -3,13 +3,14 @@
   "id": 1,
   "cookies_str": "",
   "print_level": 1,
-  "user_id": "000000000",
+  "user_id": "",
   "get_rwb_detail": 0,
+  "time_limit": "",
   "user_name": "",
   "get_comm_num": {
-    "wb_rcomm": -1,
-    "wb_ccomm": -1,
-    "rwb_rcomm": 10,
-    "rwb_ccomm": 10
+    "wb_rcomm": 0,
+    "wb_ccomm": 0,
+    "rwb_rcomm": 0,
+    "rwb_ccomm": 0
   }
 }
