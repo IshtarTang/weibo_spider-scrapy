@@ -33,27 +33,32 @@ class WeiboSpiderSpider(scrapy.Spider):
     config = json.load(open(config_path, "r", encoding="utf-8"))
     user_id = config["user_id"]
     key_word = comm_tool.get_key_word(config)
-    per_wb_path = "./file" + "/" + key_word + "/prefile/weibo.txt"
+    per_wb_path = comm_tool.get_result_filepath(config) + "/prefile/weibo.txt"
     wb_time_start_limit = 0
     saved_key = []
+
+    cookies = comm_tool.cookiestoDic(config["cookies_str"])
+
     blog_headers = {
-        'authority': 'weibo.com',
         'accept': 'application/json, text/plain, */*',
-        'accept-language': 'zh-CN,zh;q=0.9',
+        'accept-language': 'zh-CN,zh;q=0.9,en;q=0.8,zh-TW;q=0.7',
         'cache-control': 'no-cache',
-        'client-version': 'v2.37.17',
+        'client-version': 'v2.44.79',
+        # 'cookie': cookies_str,
         'pragma': 'no-cache',
-        'referer': 'https://weibo.com/u/{}'.format(config["user_id"]),
-        'sec-ch-ua': '^\\^Chromium^\\^;v=^\\^106^\\^, ^\\^Google',
+        'referer': 'https://weibo.com/u/6591638928',
+        '^sec-ch-ua': '^\\^Google',
         'sec-ch-ua-mobile': '?0',
-        'sec-ch-ua-platform': '^\\^Windows^\\^',
+        '^sec-ch-ua-platform': '^\\^Windows^\\^^',
         'sec-fetch-dest': 'empty',
         'sec-fetch-mode': 'cors',
         'sec-fetch-site': 'same-origin',
-        'server-version': 'v2022.12.21.1',
-        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.0.0 Safari/537.36',
+        'server-version': 'v2024.04.01.2',
+        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
         'x-requested-with': 'XMLHttpRequest',
+        'x-xsrf-token': cookies["XSRF-TOKEN"],
     }
+
     comm_headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:108.0) Gecko/20100101 Firefox/108.0',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
@@ -65,7 +70,6 @@ class WeiboSpiderSpider(scrapy.Spider):
         'Sec-Fetch-Mode': 'navigate',
     }
 
-    cookies = comm_tool.cookiestoDic(config["cookies_str"])
 
     # 一点废稿，spider的部分成功用到指令路径了，但是setting和pipline中都需要用配置文件，没办法从指令读
     # def __init__(self, *args, **kwargs):
@@ -141,11 +145,12 @@ class WeiboSpiderSpider(scrapy.Spider):
             print(f"配置项 时间限制 {time_limit_config} 无效")
         print(self.wb_time_start_limit)
         print("请确认redis已启动，按任意键继续，或Esc以退出")
-        x = ord(msvcrt.getch())
-        if x == 27:
-            print("程序退出")
-            logging.info("主动退出")
-            os._exit(0)
+        if self.config.get("ensure_ask", 1):
+            x = ord(msvcrt.getch())
+            if x == 27:
+                print("程序退出")
+                logging.info("主动退出")
+                os._exit(0)
 
     def start_requests(self):
         self.start()

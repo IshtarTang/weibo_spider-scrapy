@@ -203,7 +203,10 @@ def get_key_word(config, user_Chinese_symbols=True):
 
 def get_result_filepath(config):
     key_word = get_key_word(config)
-    path = "file/" + key_word
+    dir_path = config.get("dir_path", "file")
+    if not os.path.exists(dir_path):
+        os.makedirs(dir_path)
+    path = os.path.join(dir_path, key_word)
     return path
 
 

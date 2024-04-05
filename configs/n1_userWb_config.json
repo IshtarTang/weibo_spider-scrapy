@@ -2,10 +2,11 @@
   "description": "新版UI用户主页爬取模式",
   "id": 1,
   "cookies_str": "",
-  "print_level": 1,
   "user_id": "",
+  "print_level": 1,
   "get_rwb_detail": 0,
   "time_limit": "",
+  "dir_path": "file",
   "user_name": "",
   "get_comm_num": {
     "wb_rcomm": 0,
