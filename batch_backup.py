@@ -1,6 +1,7 @@
 import os
 import json
-import msvcrt
+from configs import update_all_cookies
+from auto_config.a_all_config import config_list
 
 
 # 总之就是会把cf_list里的配置全爬一遍
@@ -22,7 +23,7 @@ def run_all(configs_path, config_list):
         os.system("scrapy crawl new_wb_spider")
 
 
-def update_all_cookies(configs_path, new_cookies_dir):
+def update_all_cookies_(configs_path, new_cookies_dir):
     """
     更新所有配置文件中的cookies
     :param configs_path: 放配置文件的文件夹路径
@@ -39,25 +40,29 @@ def update_all_cookies(configs_path, new_cookies_dir):
         json.dump(config, open(config_path, "w", encoding="utf-8"), ensure_ascii=False, indent=4)
 
 
+def get_configs(dir):
+    files = os.listdir(dir)
+    files = filter(lambda x: ".json" in x, files)
+    return list(files)
+
+
 if __name__ == '__main__':
+    """
+    批量备份一堆微博主页
+    """
 
     # 这里写新cookies
     new_cookeis = """
-    
-    
-    
+UOR=,,login.sina.com.cn; SCF=AgQL8ho8S9VCgxHBFSlHE6KWEaQJeYzc4ESBw87Pq7JK9ppaV_6uDX6qaqUN8zGwiTOqVuEm42uDYkfDyjDPjt0.; SINAGLOBAL=1759562917537.7358.1711554178012; ULV=1714058480259:116:9:3:5419496136306.339.1714058480256:1713972146137; XSRF-TOKEN=KUyTkJ7QLzr7ssvs7MN4jJr0; ALF=1717385093; SUB=_2A25LMdrVDeRhGeBL4lMX8ybFyTSIHXVoT1IdrDV8PUJbkNANLWHEkW1NRte-qQD9SkKTh_D1iJY-7Z8mQwQnrsLv; SUBP=0033WrSXqPxfM725Ws9jqgMF55529P9D9WFgpqB02S8a2UJmEK1y8vEg5JpX5K-hUgL.Foqf1K2ce0n4eon2dJLoI7fJUPxfMJHkqcvEMGSL; WBPSESS=70AlSVZcFbZ5lizvBDd0tDFKRXbmy4RfksqaNBHBn_E9dIVJDMftn1umvYAQyR6seXhEgF46R2HWOFMYmK5fxAee5IcjeHsdclGBLJaD2rktzLlo62z4zFZpwQqZ1u_NvZV8rbsMlXfOk0A32_gYww==
+
     """.strip()
 
-    configs_path = "./configs"  # 这个是配置文件夹路径
-    update_all_cookies(configs_path, new_cookeis)
-    print("cookies更新完成，摁Esc退出或随便摁啥开始爬")
-    x = ord(msvcrt.getch())
-    if x == 27:
-        os._exit(0)
+    configs_path = "./auto_config"  # 这个是配置文件夹路径
+    update_all_cookies.update(configs_path, new_cookeis)
+    x = input("cookies更新完成，输入ok开爬\n")
+    # if x != "ok" and x != "":
+    #     exit()
 
     # 要跑哪些配置文件
-    config_list = ["cat.json",
-                   "duckliu.json"
-                   ]
-
+    print(get_configs(configs_path))
     run_all(configs_path, config_list)

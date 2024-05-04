@@ -11,8 +11,8 @@ from scrapy import Request
 import msvcrt
 import logging
 from scrapy_weiboSpider.items import weiboItem, commentItem
-from gadget import comm_tool
 from scrapy_weiboSpider.config_path_file import config_path
+from gadget import comm_tool
 
 
 def timestamp_to_str(timestamp):
@@ -69,7 +69,6 @@ class WeiboSpiderSpider(scrapy.Spider):
         'Sec-Fetch-Dest': 'document',
         'Sec-Fetch-Mode': 'navigate',
     }
-
 
     # 一点废稿，spider的部分成功用到指令路径了，但是setting和pipline中都需要用配置文件，没办法从指令读
     # def __init__(self, *args, **kwargs):
@@ -193,6 +192,7 @@ class WeiboSpiderSpider(scrapy.Spider):
         # 时间限制，找最新一条微博，要略过置顶
         current_page_latest_wb = {}
         for wb in wb_list:
+
             if wb.get("isTop", 0):
                 pass
             else:
@@ -342,7 +342,7 @@ class WeiboSpiderSpider(scrapy.Spider):
     def parse_wb_simple(self, wb_info, wb_item, owb_url=""):
         """
         解析微博信息的一部分，可以是一条完整的也可以是转发页retweeted_status里的
-        :param wb_info:从微博那扣来的，可以是完整信息
+        :param wb_info:从微博那扣来的，可以是完整信息也可以是retweeted_status
         :param wb_item:  wb_itme
         :return:加了解析出内容的wb_item
         """
@@ -493,7 +493,7 @@ class WeiboSpiderSpider(scrapy.Spider):
                 longtext_url = "https://weibo.com/ajax/statuses/longtext?id={}".format(bid)
                 yield Request(longtext_url, callback=self.get_long_text,
                               cookies=self.cookies, headers=self.blog_headers,
-                              meta={"wb_item": wb_item, "count": 0}, dont_filter=True)
+                              meta={"wb_item": wb_item, "count": 0, "my_count": 0}, dont_filter=True)
             else:
                 print("{} 解析完毕:{}".format(wb_item["wb_url"], wb_item["content"][:10]))
                 logging.debug("{} 解析完毕:{}".format(wb_item["wb_url"], wb_item["content"][:10]))

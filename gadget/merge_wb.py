@@ -12,13 +12,15 @@ def log_and_print(text):
 
 
 class MergeWbFile:
-    def __init__(self, filedir, main_user_id, is_simple_r_wb=0):
+    def __init__(self, filedir, main_user_id, is_simple_r_wb=0, ensure_ask=1):
         """
 
         :param filedir: 爬虫结果文件的路径，从项目路径开始算的相对路径 file/key_word
         :param main_user_id: 爬的谁的主页，用来区分是不是被转发的别人的微博
         :param is_simple_r_wb: 被转发的源微博是否只获取简单内容，详细源微博和简单源微博结果文件路径不同
+         :param ensure_ask 设成1会问要不要保留过程文件，设成0就不问，自动保留
         """
+        self.ensure_ask = ensure_ask
         self.main_user_id = main_user_id
         self.filedir = filedir
         self.pre_file_path = self.filedir + "/" + "prefile"
@@ -114,15 +116,20 @@ class MergeWbFile:
         logging.info("共计微博{}条".format(len(wb_list)))
         print("\n文件保存完毕，共计微博{}条".format(len(wb_list)))
         # 清空临时文件
-        input1 = input("是否清空临时文件（yes/no）")
-        if input1 == "yes":
-            log_and_print("清空临时文件")
-            for t_filepaht in [self.weibo_filepath, self.rcomm_filepath, self.ccomm_filepath]:
-                if os.path.exists(t_filepaht):
-                    os.remove(t_filepaht)
-                    log_and_print("删除文件 {}".format(t_filepaht))
+        if self.ensure_ask:
+            input1 = input("是否清空临时文件（yes/no）")
+
+            if input1 == "yes":
+                log_and_print("清空临时文件")
+                for t_filepaht in [self.weibo_filepath, self.rcomm_filepath, self.ccomm_filepath]:
+                    if os.path.exists(t_filepaht):
+                        os.remove(t_filepaht)
+                        log_and_print("删除文件 {}".format(t_filepaht))
+            else:
+                log_and_print("保留过程文件")
         else:
             log_and_print("保留过程文件")
+
         log_and_print("保存结束，文件保存于{}\n程序正常退出".format(self.filedir))
 
     def init_file(self):
@@ -217,5 +224,3 @@ def drop_duplicate(dicts: list, d_key):
         f_dict[dict1[d_key]] = dict1
 
     return [f_dict[key] for key in f_dict.keys()]
-
-
