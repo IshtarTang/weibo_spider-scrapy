@@ -8,6 +8,8 @@
 import scrapy
 
 
+
+
 class weiboItem(scrapy.Item):
     """
      bid: 微博bid

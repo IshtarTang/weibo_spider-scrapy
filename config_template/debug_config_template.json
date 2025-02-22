@@ -1,0 +1,29 @@
+{
+  "description": "新版用户主页爬取模式",
+  "id": 1,
+  "cookies_str": "",
+  "user_id": "",
+  "user_name": "",
+  "get_rwb_detail": 0,
+  "time_limit": "",
+  "get_comm_num": {
+    "wb_rcomm": -1,
+    "wb_ccomm": -1,
+    "rwb_rcomm": 0,
+    "rwb_ccomm": 0
+  },
+  "dir_path": "file",
+  "print_level": 0,
+  "ensure_ask": 1,
+  "debug": {
+    "description": "这里面的配置是方便debug用的，正常使用时不要使用带debug项的配置文件",
+    "on": 1,
+    "page_start": -1,
+    "saved_key_file": [
+      "saved_key_file目前没什么用",
+      "pwb",
+      "wb",
+      "rwb"
+    ]
+  }
+}

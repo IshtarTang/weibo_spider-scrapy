@@ -10,9 +10,14 @@ from scrapy.exceptions import IgnoreRequest
 import json
 import logging
 import time
+from spider_tool import comm_tool
+from scrapy_weiboSpider.config_path_file import config_path
 
 
 class MyCountDownloaderMiddleware(object):
+    config = json.load(open(config_path, "r", encoding="utf-8"))
+    cookies = comm_tool.cookiestoDic(config["cookies_str"])
+
     def process_response(self, request, response, spider):
         """
         新版微博返回的json数据中有个{"ok":1}用来表示获取成功
@@ -27,20 +32,34 @@ class MyCountDownloaderMiddleware(object):
         try:
             j_data = json.loads(response.text)
         except:
-            # 状态码414，不像是url过长，估计是太频繁了
             request.meta["my_count"] += 1
-            logging.warning(f"{response.url}解析内容出错，当前文本 {response.text}")
-            time.sleep(3)
+            # 登录失效，一般是程序中断一段时间后再运行，库里取出来的还是旧cookies，这里更新cookies再重试
+            if "passport" in response.url or "login" in response.url:
+                logging.warning(f"{request.url} cookies过期，使用文件中的cookies")
+                request.cookies = self.cookies
+                return request
+            else:
+                logging.warning(f"{response.url}解析内容出错，当前文本 {response.text}")
+                print(f"{response.url}解析内容出错，当前文本 {response.text}")
+
             return request
         # 请求正常，无事发生
         if j_data["ok"] == 1:
             return response
 
+        # 这里都只做sleep，之后看频繁的响应是什么，再写具体条件
         if my_count < 5:
             # 失败次数不超过5，+1重试
             request.meta["my_count"] += 1
-            logging.info("请求中data无效，{} 已重新获取{}次".format(request.url, request.meta["my_count"]))
-            print("请求中data无效，{} 已重新获取{}次".format(request.url, request.meta["my_count"]))
+            logging.info("响应中data无效，{} 已重新获取{}次".format(request.url, request.meta["my_count"]))
+            print("响应中data无效，{} 已重新获取{}次".format(request.url, request.meta["my_count"]))
+            time.sleep(1)
+            return request
+        elif my_count > 5 and my_count < 10:
+            request.meta["my_count"] += 1
+            logging.info("响应中data无效，{} 已重新获取{}次".format(request.url, request.meta["my_count"]))
+            print("响应中data无效，{} 已重新获取{}次".format(request.url, request.meta["my_count"]))
+            time.sleep(5)
             return request
         else:
             if request.url == response.url:
@@ -50,6 +69,10 @@ class MyCountDownloaderMiddleware(object):
             logging.error(message)
             print(message)
             raise IgnoreRequest  # 会去调用Request.errback
+
+    def process_request(self, request, spider):
+        request.cookies = self.cookies
+        return None
 
 
 class ScrapyWeibospiderSpiderMiddleware(object):

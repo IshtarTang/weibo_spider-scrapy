@@ -19,7 +19,7 @@ def read_json(file_name, coding="utf-8"):
     return content
 
 
-def save_img(url, file_name, file_path):
+def download_img(url, file_name, file_path):
     headers = {
         'Host': 'wx3.sinaimg.cn',
         'Connection': 'keep-alive',
@@ -45,14 +45,18 @@ def save_img(url, file_name, file_path):
         print("{}下载失败".format(url))
 
 
-if __name__ == '__main__':
-    file_name1 = "./wb_result.json"
-    file_name2 = "./r_wb_result.json"
-    img_path1 = "./imgs"
-    img_path2 = "./r_imgs"
+def save_img(dir_path, index):
+    file_name1 = os.path.join(dir_path, "wb_result.json")
 
-    # index = input("要保存哪个文件中的图片链接，保存result.json输入1，保存r_result.json输入2\n")
-    index = "1"
+    file_name2 = os.path.join(dir_path, "r_wb_result.json")
+    if not os.path.exists(file_name2):
+        print("r微博为简单获取")
+        file_name2 = os.path.join(dir_path, "sr_wb_result.json")
+
+    img_path1 = os.path.join(dir_path, "imgs")
+    img_path2 = os.path.join(dir_path, "r_imgs")
+
+    # 1保存result.json里的,2保存r_result.json里的
     if index == "1":
         file_name = file_name1
         img_path = img_path1
@@ -80,8 +84,6 @@ if __name__ == '__main__':
         index = 1
         for img_url in weibo_info["img_list"]:
             # =================这里修改文件名和连接==============
-            # print(img_url)
-
             img_ident = bid + "_" + str(index)
             img_url = "https://wx3.sinaimg.cn/large/" + img_url.split("/")[-1] + ".jpg"
             img_urls_info[img_ident] = img_url
@@ -108,7 +110,7 @@ if __name__ == '__main__':
     for img_ident in img_urls_info2:
         img_name = img_ident + ".jpg"
         url = img_urls_info[img_ident]
-        save_img(url, img_name, img_path)
+        download_img(url, img_name, img_path)
         count += 1
         print("保存进度 {}/{}，当前图片链接 {}".format(count, img_num, url))
         time.sleep(random.random() * 2)
@@ -119,12 +121,8 @@ if __name__ == '__main__':
     print("保存完成")
     time.sleep(3)
 
-    # 统计
-    #     print("{} - {}".format(x, img_urls_info[x]))
-    #     user_name = x.split("_")[0]
-    #     if user_name in a:
-    #         a[user_name] += 1
-    #     else:
-    #         a[user_name] = 1
-    # sort_val_dic_instance = dict(sorted(a.items(), key=operator.itemgetter(1)))  # 按照value值升序
-    # print(sort_val_dic_instance)
+
+if __name__ == '__main__':
+    dir_path = "."
+    index = input("要保存哪个文件中的图片链接，保存result.json输入1，保存r_result.json输入2\n")
+    save_img(dir_path, index)

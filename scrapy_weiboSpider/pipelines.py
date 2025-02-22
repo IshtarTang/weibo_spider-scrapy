@@ -4,12 +4,12 @@
 # # See: https://docs.scrapy.org/en/latest/topics/item-pipeline.html
 
 from scrapy_weiboSpider.items import *
-from gadget.comm_tool import get_result_filepath
+from spider_tool.comm_tool import get_result_filepath
 import json
 import os
 import logging
 from scrapy_weiboSpider.config_path_file import config_path
-from gadget import merge_wb
+from spider_tool import merge_wb
 
 
 def log_and_print(text):
@@ -91,20 +91,11 @@ class ScrapyWeibospiderPipeline(object):
         self.rcomm_file.close()
         self.ccomm_file.close()
 
-        # 只去除完全重复的行，并且写回去，如果是bid相同但有些内容(比如点赞数)不同不用处理，保留旧版本数据
-        for path1 in [self.ccomm_filepath, self.rcomm_filepath, self.weibo_filepath]:
-            with open(path1, "r", encoding="utf-8") as op:
-                file = op.read()
-            lines = file.split("\n")
-            new_lines = []
-            for line in lines:
-                if line not in new_lines:
-                    new_lines.append(line)
-            with open(path1, "w", encoding="utf-8") as op:
-                op.write("\n".join(new_lines))
         user_id = self.config["user_id"]
         # 主要整理是调用了方法
-        merge_wb_file = merge_wb.MergeWbFile(self.filedir, user_id, self.config.get("get_rwb_detail", 1),self.config.get("ensure_ask",1))
+        merge_wb_file = merge_wb.MergeWbFile(self.filedir, user_id, 0,
+                                             self.config.get("get_rwb_detail", 1),
+                                             self.config.get("ensure_ask", 1))
         merge_wb_file.run()
 
     def init_file(self):

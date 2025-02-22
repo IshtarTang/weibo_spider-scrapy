@@ -1,0 +1,19 @@
+{
+    "description": "旧UI用户主页爬取模式",
+    "id": 1,
+    "cookies_str": "UOR=,,login.sina.com.cn; SCF=AgQL8ho8S9VCgxHBFSlHE6KWEaQJeYzc4ESBw87Pq7JK9ppaV_6uDX6qaqUN8zGwiTOqVuEm42uDYkfDyjDPjt0.; SINAGLOBAL=1759562917537.7358.1711554178012; SUBP=0033WrSXqPxfM725Ws9jqgMF55529P9D9WFgpqB02S8a2UJmEK1y8vEg5JpX5KMhUgL.Foqf1K2ce0n4eon2dJLoI7fJUPxfMJHkqcvEMGSL; ULV=1714058480259:116:9:3:5419496136306.339.1714058480256:1713972146137; ALF=1716743885; SUB=_2A25LL5GdDeRhGeBL4lMX8ybFyTSIHXVoRKtVrDV8PUJbkNB-LVndkW1NRte-qYNqpJpILDpDaZmgVtH6sisKCHBl; XSRF-TOKEN=KUyTkJ7QLzr7ssvs7MN4jJr0; WBPSESS=70AlSVZcFbZ5lizvBDd0tDFKRXbmy4RfksqaNBHBn_E9dIVJDMftn1umvYAQyR6seXhEgF46R2HWOFMYmK5fxBmEP82mwFRXJlYQeJZWmTfrhVW1fpSjISGHidwgWSfNKYYzzBjl-E4XOap-Hp_Esg==",
+    "print_level": 1,
+    "user_id": "000000000000",
+    "user_name": "test",
+    "time_range": {
+        "enable": 0,
+        "start_time": "",
+        "stop_time": 0
+    },
+    "get_comm_num": {
+        "wb_rcomm": -1,
+        "wb_ccomm": -1,
+        "rwb_rcomm": 15,
+        "rwb_ccomm": 15
+    }
+}

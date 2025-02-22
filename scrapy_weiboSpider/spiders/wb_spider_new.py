@@ -12,7 +12,7 @@ import msvcrt
 import logging
 from scrapy_weiboSpider.items import weiboItem, commentItem
 from scrapy_weiboSpider.config_path_file import config_path
-from gadget import comm_tool
+from spider_tool import comm_tool
 
 
 def timestamp_to_str(timestamp):
@@ -70,21 +70,6 @@ class WeiboSpiderSpider(scrapy.Spider):
         'Sec-Fetch-Mode': 'navigate',
     }
 
-    # 一点废稿，spider的部分成功用到指令路径了，但是setting和pipline中都需要用配置文件，没办法从指令读
-    # def __init__(self, *args, **kwargs):
-    #     super().__init__(*args, **kwargs)
-    #     # 如果指令传了配置路径，优先使用指令指定的配置文件
-    #     if kwargs.get('config_path', ""):
-    #         config_path = "./configs/" + kwargs.get('config_path')
-    #         self.config = json.load(open(config_path, "r", encoding="utf-8"))
-    #         print(f"从指令读取配置路径 {config_path}")
-    #         logging.info(f"从指令读取配置路径 {config_path}")
-    #     else:
-    #         # 读文件设置的
-    #         from scrapy_weiboSpider.config_path_file import config_path
-    #         self.config = json.load(open(config_path, "r", encoding="utf-8"))
-    #         print(f"从文件读取配置路径 {config_path}")
-    #         logging.info(f"从文件读取配置路径 {config_path}")
 
     def start(self):
         """
@@ -164,11 +149,11 @@ class WeiboSpiderSpider(scrapy.Spider):
 
         start_url = "https://weibo.com/ajax/statuses/mymblog?" \
                     "uid={}&page={}&feature=0".format(self.user_id, start_page)
-        yield Request(start_url, callback=self.del_mymblog_page,
+        yield Request(start_url, callback=self.get_mymblog_page,
                       cookies=self.cookies, headers=self.blog_headers, meta={"my_count": 0},
                       dont_filter=True)
 
-    def del_mymblog_page(self, response):
+    def get_mymblog_page(self, response):
         """
         用户主页的数据
         """
@@ -189,30 +174,29 @@ class WeiboSpiderSpider(scrapy.Spider):
                 logging.info(f"【debug项】 页数限制{page_limt}，结束获取")
                 return
 
-        # 时间限制，找最新一条微博，要略过置顶
-        current_page_latest_wb = {}
-        for wb in wb_list:
-
-            if wb.get("isTop", 0):
-                pass
-            else:
-                current_page_latest_wb = wb
-                break
-        current_page_latest_public_time = current_page_latest_wb.get("created_at", 0)
-        create_datetime = datetime.strptime(current_page_latest_public_time, '%a %b %d %X %z %Y')
-        current_page_latest_timestamp = int(time.mktime(create_datetime.timetuple()) * 1000)  # 发表时间的时间戳
-
-        if self.wb_time_start_limit != 0 and current_page_latest_timestamp <= self.wb_time_start_limit:
-            print("时间限制{}，当前页面最新微博时间 {}，主页获取结束".format(
-                timestamp_to_str(self.wb_time_start_limit), timestamp_to_str(current_page_latest_timestamp)))
-            return
-
-        # 下一页
         since_id = j_data["data"]["since_id"]
-        if since_id:
+        if since_id:  # 有下一页
+            if self.wb_time_start_limit != 0:  # 有时间限制
+                # 时间限制，找当前页最新一条微博，要略过置顶
+                current_page_latest_wb = {}
+                for wb in wb_list:
+                    if wb.get("isTop", 0):
+                        pass
+                    else:
+                        current_page_latest_wb = wb
+                        break
+                current_page_latest_public_time = current_page_latest_wb.get("created_at", 0)
+                create_datetime = datetime.strptime(current_page_latest_public_time, '%a %b %d %X %z %Y')
+                current_page_latest_timestamp = int(time.mktime(create_datetime.timetuple()) * 1000)  # 发表时间的时间戳
+                # 如果本页最新一条比限制时间早，直接截断，本页的也不用进行解析
+                if current_page_latest_timestamp <= self.wb_time_start_limit:
+                    print("时间限制{}，当前页面最新微博时间 {}，主页获取结束".format(
+                        timestamp_to_str(self.wb_time_start_limit), timestamp_to_str(current_page_latest_timestamp)))
+                    return
+            # 把下一页的链接送进去
             next_url = "https://weibo.com/ajax/statuses/mymblog?" \
                        "uid={}&page={}&feature=0&since_id={}".format(self.user_id, page + 1, since_id)
-            yield Request(next_url, callback=self.del_mymblog_page, meta={"my_count": 0},
+            yield Request(next_url, callback=self.get_mymblog_page, meta={"my_count": 0},
                           dont_filter=True, priority=1, cookies=self.cookies, headers=self.blog_headers)
         # 网络出问题时有可能获取不到下一页
         elif meta["my_count"] < 5:
