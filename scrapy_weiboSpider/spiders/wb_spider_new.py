@@ -70,7 +70,6 @@ class WeiboSpiderSpider(scrapy.Spider):
         'Sec-Fetch-Mode': 'navigate',
     }
 
-
     def start(self):
         """
         一些打印输出；读上次获取完成的微博，制成self.saved_key
@@ -254,9 +253,11 @@ class WeiboSpiderSpider(scrapy.Spider):
             for c_or_i in commItem_and_rcommReqs:
                 yield c_or_i
             comm_count += 1  # 确认送去解析再 +1
-        print("获取到{} comm {} 条，上级为 {}，重试{}次".format(comm_type, len(comms), superior_id, meta.get("failure_max_id", 0)))
+        print("获取到{} comm {} 条，上级为 {}，重试{}次".format(comm_type, len(comms), superior_id,
+                                                    meta.get("failure_with_max_id", 0)))
         logging.debug(
-            "获取到{} comm {} 条，上级为 {}，重试{}次".format(comm_type, len(comms), superior_id, meta.get("failure_max_id", 0)))
+            "获取到{} comm {} 条，上级为 {}，重试{}次".format(comm_type, len(comms), superior_id,
+                                                  meta.get("failure_with_max_id", 0)))
 
         # #### 以下是翻页部分 ##########
         # 确定评论限制多少数量
@@ -290,15 +291,20 @@ class WeiboSpiderSpider(scrapy.Spider):
             # pc端会出现有子评论但是无法完全翻页的状况（有max_id，但是不会返回评论）
             # 如果出现这种情况就开始在meta计数（不知道会不会有其他情况也这种，总之也多试两次），
             if len(comms) == 0:
-                failure_max_id = meta.get("failure_max_id", 0)
-                # 重复16次，评论到后面要一直往后拿max_id到15次才能获取到有数据的（真的很迷，而且真不是代码的问题，浏览器也这样，留档里放了图）
-                if failure_max_id > 16:
-                    print(f"{superior_id} 下 {comm_type} 评论无法完整获取，评论链接{o_url}")
-                    logging.info(f"{superior_id}下{comm_type}评论无法完整获取，评论链接{o_url}")
+                trends_text = j_data["trendsText"]
+                if trends_text in ["博主已开启评论精选", "博主已开启防火墙，部分内容暂不展示", "已过滤部分评论"]:
+                    logging.info(f"{superior_id} 下 {comm_type} 状态： {trends_text}，结束获取该条微博评论")
+                    print(f"{superior_id} 下 {comm_type} 状态： {trends_text}，结束获取该条微博评论")
                     return
-                next_meta["failure_max_id"] = failure_max_id + 1
+                failure_with_max_id = meta.get("failure_with_max_id", 0)
+                # 重复16次，评论到后面要一直往后拿max_id到15次才能获取到有数据的（很迷，真不是代码的问题，浏览器也这样，留档里放了图）
+                if failure_with_max_id > 16:
+                    print(f"{superior_id} 下 {comm_type} 评论无法完整获取，评论链接{o_url}")
+                    logging.warning(f"{superior_id}下{comm_type}评论无法完整获取，评论链接{o_url}")
+                    return
+                next_meta["failure_with_max_id"] = failure_with_max_id + 1
 
-            yield Request(next_url, callback=self.get_comm,
+            yield Request(next_url, callback=self.get_comm, priority=2,  # 这里用了目前最高的优先级
                           meta=next_meta, dont_filter=True, cookies=self.cookies, headers=self.comm_headers, )
         if comm_count >= comm_limit and comm_limit != -1:
             logging.debug(
@@ -422,6 +428,8 @@ class WeiboSpiderSpider(scrapy.Spider):
                 break
         # 评论详情
         if is_get_comm and wb_info["comments_count"]:
+            # comm_url_base = "https://weibo.com/ajax/statuses/buildComments?flow=0&is_reload=1&" \
+            #                 "id={}&is_show_bulletin=2&is_mix=0&count=10&uid={}"
             comm_url_base = "https://weibo.com/ajax/statuses/buildComments?flow=0&is_reload=1&" \
                             "id={}&is_show_bulletin=2&is_mix=0&count=10&uid={}"
             comm_url = comm_url_base.format(mid, user_id)

@@ -43,17 +43,25 @@ class ScrapyWeibospiderPipeline(object):
         self.ccomm_filepath = self.pre_file_path + "/ccomm.txt"
 
         # 初始化文件
-        self.init_file()
+        for path1 in [self.filedir, self.pre_file_path]:
+            if not os.path.exists(path1):
+                os.makedirs(path1)
+                log_and_print("新建文件夹 {}".format(path1))
+            else:
+                log_and_print("文件夹 {} 已存在".format(path1))
 
         # 过程文件
-        self.weibo_file = open(self.weibo_filepath, "a", encoding="utf-8")
-        self.rcomm_file = open(self.rcomm_filepath, "a", encoding="utf-8")
-        self.ccomm_file = open(self.ccomm_filepath, "a", encoding="utf-8")
+        self.weibo_file = None
+        self.rcomm_file = None
+        self.ccomm_file = None
 
         print("文件初始化完成")
 
     def open_spider(self, spider):
-        pass
+        # 打开过程文件
+        self.weibo_file = open(self.weibo_filepath, "a", encoding="utf-8")
+        self.rcomm_file = open(self.rcomm_filepath, "a", encoding="utf-8")
+        self.ccomm_file = open(self.ccomm_filepath, "a", encoding="utf-8")
 
     def process_item(self, item: scrapy.Item, spider):
         """
@@ -93,20 +101,6 @@ class ScrapyWeibospiderPipeline(object):
 
         user_id = self.config["user_id"]
         # 主要整理是调用了方法
-        merge_wb_file = merge_wb.MergeWbFile(self.filedir, user_id, 0,
-                                             self.config.get("get_rwb_detail", 1),
-                                             self.config.get("ensure_ask", 1))
+        merge_wb_file = merge_wb.MergeWbFile(
+            self.filedir, user_id, self.config.get("get_rwb_detail", 1), self.config.get("ensure_ask", 1))
         merge_wb_file.run()
-
-    def init_file(self):
-        """
-        初始化目录文件
-        :return:
-        """
-        # 文件目录和预写文件目录
-        for path1 in [self.filedir, self.pre_file_path]:
-            if not os.path.exists(path1):
-                os.makedirs(path1)
-                log_and_print("新建文件夹 {}".format(path1))
-            else:
-                log_and_print("文件夹 {} 已存在".format(path1))
