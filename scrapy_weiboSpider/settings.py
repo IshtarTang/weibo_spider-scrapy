@@ -1,22 +1,20 @@
 # -*- coding: utf-8 -*-
 import json
-from scrapy_weiboSpider.config_path_file import config_path
 from spider_tool import comm_tool
-
-cp = config_path
-
-config = json.load(open(config_path, "r", encoding="utf-8"))
-
+import os
 FEED_EXPORT_ENCODING = "gbk"
+
 
 # 指定Redis的主机名和端口
 REDIS_HOST = '127.0.0.1'
 REDIS_PORT = 6379
 
+CONFIG_PATH = f"configs{os.sep}dufault_config.json"
+
 # redis key
-redis_key = comm_tool.get_key_word(config, False)
-SCHEDULER_DUPEFILTER_KEY = '{}:dupefilter'.format(redis_key)
-SCHEDULER_QUEUE_KEY = "{}:requests".format(redis_key)
+redis_key = comm_tool.get_key_word(json.load(open(CONFIG_PATH, "r", encoding="utf-8")), False)
+SCHEDULER_DUPEFILTER_KEY = 'weibo_default:dupefilter'
+SCHEDULER_QUEUE_KEY = "weibo_default:requests"
 
 SCHEDULER = "scrapy_redis.scheduler.Scheduler"
 # DUPEFILTER_CLASS = "scrapy_redis.dupefilter.RFPDupeFilter"

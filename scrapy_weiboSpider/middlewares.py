@@ -11,12 +11,19 @@ import json
 import logging
 import time
 from spider_tool import comm_tool
-from scrapy_weiboSpider.config_path_file import config_path
 
 
 class MyCountDownloaderMiddleware(object):
-    config = json.load(open(config_path, "r", encoding="utf-8"))
-    cookies = comm_tool.cookiestoDic(config["cookies_str"])
+
+    def __init__(self,config_path):
+        config = json.load(open(config_path, "r", encoding="utf-8"))
+        self.cookies = comm_tool.cookiestoDic(config["cookies_str"])
+    
+    @classmethod
+    def from_crawler(cls, crawler):
+        CONFIG_PATH = crawler.settings.get('CONFIG_PATH')
+        return cls(CONFIG_PATH)
+
 
     def process_response(self, request, response, spider):
         """
@@ -48,7 +55,7 @@ class MyCountDownloaderMiddleware(object):
             return response
 
         # 这里都只做sleep，之后看频繁的响应是什么，再写具体条件
-        if my_count < 5:
+        elif my_count < 5:
             # 失败次数不超过5，+1重试
             request.meta["my_count"] += 1
             logging.info("响应中data无效，{} 已重新获取{}次".format(request.url, request.meta["my_count"]))

@@ -11,7 +11,6 @@ from scrapy import Request
 import msvcrt
 import logging
 from scrapy_weiboSpider.items import weiboItem, commentItem
-from scrapy_weiboSpider.config_path_file import config_path
 from spider_tool import comm_tool
 
 
@@ -30,52 +29,66 @@ class WeiboSpiderSpider(scrapy.Spider):
     name = 'new_wb_spider'
     allowed_domains = ['weibo.com']
 
-    config = json.load(open(config_path, "r", encoding="utf-8"))
-    user_id = config["user_id"]
-    key_word = comm_tool.get_key_word(config)
-    per_wb_path = comm_tool.get_result_filepath(config) + "/prefile/weibo.txt"
-    wb_time_start_limit = 0
-    saved_key = []
+    @classmethod
+    def from_crawler(cls, crawler, *args, **kwargs):
+        settting = crawler.settings
+        config_path = settting["CONFIG_PATH"]
+        config = json.load(open(config_path, "r", encoding="utf-8"))
+        # 用配置文件弄出本次的redis_key，更新到setting里
+        redis_key = comm_tool.get_key_word(config)
+        crawler.settings.update({
+            "SCHEDULER_DUPEFILTER_KEY": f'{redis_key}:dupefilter',
+            "SCHEDULER_QUEUE_KEY": f"{redis_key}:requests"})
+        return cls(config_path)
 
-    cookies = comm_tool.cookiestoDic(config["cookies_str"])
+    def __init__(self, config_path, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.config = json.load(open(config_path, "r", encoding="utf-8"))
+        self.user_id = self.config["user_id"]
+        self.key_word = comm_tool.get_key_word(self.config)
+        self.per_wb_path = comm_tool.get_result_filepath(self.config) + "/prefile/weibo.txt"
+        self.wb_time_start_limit = 0
+        self.saved_key = []
 
-    blog_headers = {
-        'accept': 'application/json, text/plain, */*',
-        'accept-language': 'zh-CN,zh;q=0.9,en;q=0.8,zh-TW;q=0.7',
-        'cache-control': 'no-cache',
-        'client-version': 'v2.44.79',
-        # 'cookie': cookies_str,
-        'pragma': 'no-cache',
-        'referer': 'https://weibo.com/u/6591638928',
-        '^sec-ch-ua': '^\\^Google',
-        'sec-ch-ua-mobile': '?0',
-        '^sec-ch-ua-platform': '^\\^Windows^\\^^',
-        'sec-fetch-dest': 'empty',
-        'sec-fetch-mode': 'cors',
-        'sec-fetch-site': 'same-origin',
-        'server-version': 'v2024.04.01.2',
-        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
-        'x-requested-with': 'XMLHttpRequest',
-        'x-xsrf-token': cookies["XSRF-TOKEN"],
-    }
+        self.cookies = comm_tool.cookiestoDic(self.config["cookies_str"])
 
-    comm_headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:108.0) Gecko/20100101 Firefox/108.0',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-        'Accept-Language': 'zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2',
-        'Accept-Encoding': 'gzip, deflate, br',
-        'Connection': 'keep-alive',
-        'Upgrade-Insecure-Requests': '1',
-        'Sec-Fetch-Dest': 'document',
-        'Sec-Fetch-Mode': 'navigate',
-    }
+        self.blog_headers = {
+            'accept': 'application/json, text/plain, */*',
+            'accept-language': 'zh-CN,zh;q=0.9,en;q=0.8,zh-TW;q=0.7',
+            'cache-control': 'no-cache',
+            'client-version': 'v2.44.79',
+            'pragma': 'no-cache',
+            'referer': 'https://weibo.com/',
+            '^sec-ch-ua': '^\\^Google',
+            'sec-ch-ua-mobile': '?0',
+            '^sec-ch-ua-platform': '^\\^Windows^\\^^',
+            'sec-fetch-dest': 'empty',
+            'sec-fetch-mode': 'cors',
+            'sec-fetch-site': 'same-origin',
+            'server-version': 'v2024.04.01.2',
+            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
+            'x-requested-with': 'XMLHttpRequest',
+            'x-xsrf-token': self.cookies["XSRF-TOKEN"],
+        }
+
+        self.comm_headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:108.0) Gecko/20100101 Firefox/108.0',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+            'Accept-Language': 'zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1',
+            'Sec-Fetch-Dest': 'document',
+            'Sec-Fetch-Mode': 'navigate',
+        }
 
     def start(self):
         """
         一些打印输出；读上次获取完成的微博，制成self.saved_key
         """
         print("\n本次运行的文件key为 {}".format(self.key_word))
-        comm_config_str = {"wb_rcomm": "微博根评论", "wb_ccomm": "微博子评论", "rwb_rcomm": "源微博根评论", "rwb_ccomm": "源微博子评论"}
+        comm_config_str = {"wb_rcomm": "微博根评论", "wb_ccomm": "微博子评论", "rwb_rcomm": "源微博根评论",
+                           "rwb_ccomm": "源微博子评论"}
         print("评论获取设置：")
         for comm_config in self.config["get_comm_num"]:
             get_comm_num = self.config["get_comm_num"][comm_config]
@@ -91,7 +104,7 @@ class WeiboSpiderSpider(scrapy.Spider):
                 file1 = open(self.per_wb_path, "r", encoding="utf-8").read().strip()
                 if file1:
                     tmp_str = "[" + ",".join(file1.split("\n")) + "]"
-                    file = json.loads(tmp_str, encoding="utf-8")
+                    file = json.loads(tmp_str)
                     for x in file:
                         self.saved_key.append(x["bid"])
                     print("录入 {} 的微博下载记录".format(self.per_wb_path))
@@ -133,7 +146,8 @@ class WeiboSpiderSpider(scrapy.Spider):
             if x == 27:
                 print("程序退出")
                 logging.info("主动退出")
-                os._exit(0)
+                import sys
+                sys.exit(0)
 
     def start_requests(self):
         self.start()
@@ -184,7 +198,8 @@ class WeiboSpiderSpider(scrapy.Spider):
                     else:
                         current_page_latest_wb = wb
                         break
-                current_page_latest_public_time = current_page_latest_wb.get("created_at", 0)
+                current_page_latest_public_time = current_page_latest_wb.get(
+                    "created_at", "Thu Jan 01 00:00:00 +0000 1970")
                 create_datetime = datetime.strptime(current_page_latest_public_time, '%a %b %d %X %z %Y')
                 current_page_latest_timestamp = int(time.mktime(create_datetime.timetuple()) * 1000)  # 发表时间的时间戳
                 # 如果本页最新一条比限制时间早，直接截断，本页的也不用进行解析
@@ -254,10 +269,10 @@ class WeiboSpiderSpider(scrapy.Spider):
                 yield c_or_i
             comm_count += 1  # 确认送去解析再 +1
         print("获取到{} comm {} 条，上级为 {}，重试{}次".format(comm_type, len(comms), superior_id,
-                                                    meta.get("failure_with_max_id", 0)))
+                                                              meta.get("failure_with_max_id", 0)))
         logging.debug(
             "获取到{} comm {} 条，上级为 {}，重试{}次".format(comm_type, len(comms), superior_id,
-                                                  meta.get("failure_with_max_id", 0)))
+                                                            meta.get("failure_with_max_id", 0)))
 
         # #### 以下是翻页部分 ##########
         # 确定评论限制多少数量
@@ -277,7 +292,7 @@ class WeiboSpiderSpider(scrapy.Spider):
                 else:
                     comm_limit = comm_limit_config["rwb_ccomm"]
         print(f"用户id {user_id}，类型 {comm_type}，评论限制{comm_limit}，当前数量{comm_count}，上级 {superior_id}")
-        logging.info(f"用户id {user_id}，类型 {comm_type}，评论限制{comm_limit}，当前数量{comm_count}，上级 {superior_id}")
+        logging.debug(f"用户id {user_id}，类型 {comm_type}，评论限制{comm_limit}，当前数量{comm_count}，上级 {superior_id}")
 
         next_url = ""
         # 有max_id说明有下一页，如果没到限制的数量或者不限制（-1是不限制），把url改成下一页的继续爬
@@ -293,7 +308,7 @@ class WeiboSpiderSpider(scrapy.Spider):
             if len(comms) == 0:
                 trends_text = j_data["trendsText"]
                 if trends_text in ["博主已开启评论精选", "博主已开启防火墙，部分内容暂不展示", "已过滤部分评论"]:
-                    logging.info(f"{superior_id} 下 {comm_type} 状态： {trends_text}，结束获取该条微博评论")
+                    logging.debug(f"{superior_id} 下 {comm_type} 状态： {trends_text}，结束获取该条微博评论")
                     print(f"{superior_id} 下 {comm_type} 状态： {trends_text}，结束获取该条微博评论")
                     return
                 failure_with_max_id = meta.get("failure_with_max_id", 0)
@@ -308,7 +323,8 @@ class WeiboSpiderSpider(scrapy.Spider):
                           meta=next_meta, dont_filter=True, cookies=self.cookies, headers=self.comm_headers, )
         if comm_count >= comm_limit and comm_limit != -1:
             logging.debug(
-                "{}/{} {}已经获取足够评论条数 get {} limit{}".format(user_id, superior_id, response.url, comm_count, comm_limit))
+                "{}/{} {}已经获取足够评论条数 get {} limit{}".format(user_id, superior_id, response.url, comm_count,
+                                                                     comm_limit))
         # 还没写，这里要处理能获取到下一页链接，但解析出的评论数量0的问题
         if len(comms) == 0 and next_url:
             logging.warning("评论 {} 未获取到内容，上级链接{}，类型{}，下个链接{}，当前内容 \n{}".
@@ -324,7 +340,7 @@ class WeiboSpiderSpider(scrapy.Spider):
         :return:
         """
         content = response.text
-        wb_info = json.loads(content, encoding="utf-8")
+        wb_info = json.loads(content)
         item_and_request = self.parse_wb(wb_info, self.config.get("get_rwb_detail", 1))
         for i_or_r in item_and_request:
             yield i_or_r
@@ -535,12 +551,17 @@ class WeiboSpiderSpider(scrapy.Spider):
         result_list.append(comm_item)
         this_comm_num += 1
         # 是否要获取子评论
-        if comm_type == "wb_rcomm":
-            ccomm_limit = self.config["get_comm_num"]["wb_ccomm"]
-        elif comm_type == "rwb_rcomm":
-            ccomm_limit = self.config["get_comm_num"]["rwb_ccomm"]
+        if comm_type == "root":
+            if user_id == self.config["user_id"]:
+                ccomm_limit = self.config["get_comm_num"]["wb_ccomm"]
+            else:
+                ccomm_limit = self.config["get_comm_num"]["rwb_ccomm"]
+        elif comm_type == "child":
+            ccomm_limit = 0
         else:
             ccomm_limit = 0
+            logging.warning(f"parse_comm 评论类型异常 {comm_type} \n评论信息{comm_info}")
+
         # 是否有子评论，有的且需要的话送去请求
         if comm_info.get("comments", []) and ccomm_limit:
             ccomm_url = "https://weibo.com/ajax/statuses/buildComments?is_reload=1&" \

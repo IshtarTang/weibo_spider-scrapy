@@ -8,7 +8,6 @@ from spider_tool.comm_tool import get_result_filepath
 import json
 import os
 import logging
-from scrapy_weiboSpider.config_path_file import config_path
 from spider_tool import merge_wb
 
 
@@ -32,7 +31,12 @@ class NewVerPipeline(object):
 
 
 class ScrapyWeibospiderPipeline(object):
-    def __init__(self):
+
+    @classmethod
+    def from_crawler(cls, crawler):
+        return cls(crawler.settings["CONFIG_PATH"])
+
+    def __init__(self, config_path):
         print("文件准备")
         self.config = json.load(open(config_path, "r", encoding="utf-8"))
         self.filedir = get_result_filepath(self.config)

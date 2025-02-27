@@ -1,5 +1,5 @@
 {
-  "description": "新版用户主页爬取模式",
+  "description": "新版用户主页爬取，带debug项的配置文件，一般来说别用",
   "id": 1,
   "cookies_str": "",
   "user_id": "",
@@ -16,7 +16,6 @@
   "print_level": 0,
   "ensure_ask": 1,
   "debug": {
-    "description": "这里面的配置是方便debug用的，正常使用时不要使用带debug项的配置文件",
     "on": 1,
     "page_start": -1,
     "saved_key_file": [

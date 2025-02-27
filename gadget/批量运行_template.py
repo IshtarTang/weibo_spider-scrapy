@@ -20,6 +20,8 @@ if __name__ == '__main__':
     """
     把这个复制到项目路径下运行
     批量备份一堆微博主页
+    
+    走命令行启动，不然按不了Ctrl+C
     """
     configs_path = "auto_configs"  # 放配置文件的文件夹
     changes = {

@@ -1,4 +1,13 @@
 # -*- coding: utf-8 -*-
+
+
+"""
+这个是针对微博旧版UI的spider程序
+由于旧版本UI的cookies已无法获取，且项目随新版spider做了很多修改，这一版已完全废弃
+"""
+
+
+
 import scrapy
 import os
 import json
@@ -46,7 +55,8 @@ class WeiboSpiderSpider(scrapy.Spider):
         else:
             print("检查完成")
         print("\n本次运行的文件key为 {}".format(self.key_word))
-        comm_config_str = {"wb_rcomm": "微博根评论", "wb_ccomm": "微博子评论", "rwb_rcomm": "源微博根评论", "rwb_ccomm": "源微博子评论"}
+        comm_config_str = {"wb_rcomm": "微博根评论", "wb_ccomm": "微博子评论", "rwb_rcomm": "源微博根评论",
+                           "rwb_ccomm": "源微博子评论"}
         print("评论获取设置：", end="\t")
         for comm_config in self.config["get_comm_num"]:
             if self.config["get_comm_num"][comm_config] == -1:
@@ -340,7 +350,8 @@ class WeiboSpiderSpider(scrapy.Spider):
             meta["ccomm_count"] += len(child_comment_divs)
         except:
             logging.warning("meta_count无 {} ".format(meta))
-        logging.info("{} 获取到 rcomm {} 条，总计 {} 条".format(root_comm_id, len(child_comment_divs), meta["ccomm_count"]))
+        logging.info(
+            "{} 获取到 rcomm {} 条，总计 {} 条".format(root_comm_id, len(child_comment_divs), meta["ccomm_count"]))
         print("{} 获取到 rcomm {} 条，总计 {} 条".format(root_comm_id, len(child_comment_divs), meta["ccomm_count"]))
 
         # 如果未到达要求的子评论数量
@@ -445,8 +456,8 @@ class WeiboSpiderSpider(scrapy.Spider):
                     replace("//\n@", "//@").replace("\n:", ":").replace("\xa0", "").replace("\xa1", "").strip()
                 logging.info(
                     "当前微博[{}]{} 时间({})不在要求范围内[{}-{}]，被过滤掉"
-                        .format(public_timestamp, content[:10], public_timestamp,
-                                time_range_config["start_time"], time_range_config["stop_time"])
+                    .format(public_timestamp, content[:10], public_timestamp,
+                            time_range_config["start_time"], time_range_config["stop_time"])
                 )
 
                 return

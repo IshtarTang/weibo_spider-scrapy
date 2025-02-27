@@ -179,7 +179,7 @@ def write_json(json_obj, path, coding="utf-8"):
 
 def read_json(path, coding="utf-8"):
     str1 = open(path, "r", encoding=coding).read()
-    json_obj = json.loads(str1, encoding="utf-8")
+    json_obj = json.loads(str1)
     return json_obj
 
 

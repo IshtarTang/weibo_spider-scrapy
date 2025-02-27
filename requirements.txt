@@ -1,11 +1,11 @@
-lxml==4.8.0
+Scrapy==2.11
+lxml
 parsel
-w3lib==1.22.0
+w3lib
 twisted
-cryptography==36.0.2
-pyOpenSSL==22.0.0
-requests==2.27.1
-Scrapy== 2.6.1
-Scrapy-Redis==0.6.8
+cryptography
+pyOpenSSL
+requests
+Scrapy-Redis
 json5
 pandas

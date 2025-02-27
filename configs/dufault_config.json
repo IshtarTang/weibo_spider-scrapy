@@ -1,5 +1,5 @@
 {
-  "description": "新版用户主页爬取，配置文件模板",
+    "description": "新版用户主页爬取模式，默认配置文件，没有修改setting中的config_path 也没在指令传参就默认用这个",
   "id": 1,
   "cookies_str": "",
   "user_id": "",
