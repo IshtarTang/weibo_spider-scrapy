@@ -15,7 +15,7 @@ headers = {
     'Accept-Encoding': 'gzip, deflate',
     'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8,zh-TW;q=0.7',
 }
-url = "https://wx2.sinaimg.cn/mw690/6f8ddeb4ly1gdp3zfuc0bj20c887ttms.jpg"
+url = "https://wx1.sinaimg.cn/large/89dd1cc6ly1heplthl7imj218g0pxtpm.jpg"
 response = requests.get(url, headers=headers)
 content = response.content
 with open("test.jpg", "wb") as op:

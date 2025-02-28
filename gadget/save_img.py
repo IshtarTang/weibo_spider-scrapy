@@ -29,6 +29,11 @@ def save_img(url, file_name, file_path):
 
 
 if __name__ == '__main__':
+    """
+    这个对应的是旧版的结果文件，好像旧版某次更新之后也用不了了
+    反正就是用不了，去用save_img_new.py
+    """
+
     file_name1 = "./wb_result.json"
     file_name2 = "./r_wb_result.json"
     img_path1 = "./imgs"

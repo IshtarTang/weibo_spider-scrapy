@@ -11,7 +11,7 @@ def nodify_configs(changes: dict, folder_path=".", include_subfolders=0):
     :param include_subfolders 0为只修改指定文件夹下的配置文件，1还会修改所有子文件夹里的配置文件
     :return: 改了哪些文件
     """
-    filenames = get_all_config_path(folder_path, include_subfolders)
+    filenames = get_config_paths(folder_path, include_subfolders)
     for filename in filenames:
         # file_path = f"{folder_path}{os.sep}{filename}"
         info = json.load(open(filename, "r", encoding="utf-8"))
@@ -22,7 +22,7 @@ def nodify_configs(changes: dict, folder_path=".", include_subfolders=0):
     return filenames
 
 
-def get_all_config_path(path1=".", include_subfolders=0):
+def get_config_paths(path1=".", include_subfolders=0):
     """
     获取路径下的所有配置文件
     :param path1: 路径

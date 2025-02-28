@@ -1,9 +1,14 @@
-# 把同一个用户 两次不同key的结果文件合并成一个
 import os
 from spider_tool import merge_wb
 
 
-def merge_result_file(dirs, result_path):
+def merge_result_file(dirs:list, result_path):
+    """
+    把同一个用户 两次不同key的结果文件合并成一个
+    :param dirs: 结果文件路径列表，到 /Key 就行，不用到 /prefile
+    :param result_path: 合并之后放哪
+    :return:
+    """
     sep = os.path.sep
     result_prefile_path = f"{result_path}{sep}prefile"
     if not os.path.exists(result_path):
@@ -25,6 +30,7 @@ def merge_result_file(dirs, result_path):
 
 
 if __name__ == '__main__':
+    # 把同一个用户 两次不同key的结果文件合并成一个
     dirs = ["path1", "path2", "path3"]  # 文件路径，到 /Key 就行，不用到 /prefile
     result_path = "result_path"  # 合并之后放哪
     merge_result_file(dirs, result_path)

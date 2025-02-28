@@ -38,56 +38,70 @@ def download_img(url, file_name, file_path):
     try:
         response = requests.get(url, headers=headers)
         content = response.content
-        with open(file_path + "/" + file_name, "wb") as op:
+        with open(os.path.join(file_path,file_name) , "wb") as op:
             op.write(content)
     except Exception as e:
-        # print(traceback.format_exc())
+        print(traceback.format_exc())
         print("{}下载失败".format(url))
 
 
-def save_img(dir_path, index):
-    file_name1 = os.path.join(dir_path, "wb_result.json")
+def save_img(weibo_filepath, img_path, index, pic_class=None, ensure_ask=1):
+    """
+    :param weibo_filepath: 结果文件路径
+    :param img_path: 图片存放路径
+    :param index: 1保存result.json里的，2保存r_result.json里的
+    :param pic_class:设了这项图片会保存到img_path/pic_class，不设的话，result.json的图保存在img_path/imgs，r_result.json保存在img_path/r_imgs
+    :param ensure_ask: 默认在开始存图之前会停一下让你确认，输0就不用
+    :return:
+    """
 
-    file_name2 = os.path.join(dir_path, "r_wb_result.json")
-    if not os.path.exists(file_name2):
+    o_wb_result_filename = os.path.join(weibo_filepath, "wb_result.json")
+    r_wb_result_filename = os.path.join(weibo_filepath, "r_wb_result.json")
+    if not os.path.exists(r_wb_result_filename):
         print("r微博为简单获取")
-        file_name2 = os.path.join(dir_path, "sr_wb_result.json")
-
-    img_path1 = os.path.join(dir_path, "imgs")
-    img_path2 = os.path.join(dir_path, "r_imgs")
+        r_wb_result_filename = os.path.join(weibo_filepath, "sr_wb_result.json")
 
     # 1保存result.json里的,2保存r_result.json里的
-    if index == "1":
-        file_name = file_name1
-        img_path = img_path1
-    elif index == "2":
-        file_name = file_name2
-        img_path = img_path2
+    if index == "1" or index == 1:
+        weibo_result_filename = o_wb_result_filename
+    elif index == "2" or index == 2:
+        weibo_result_filename = r_wb_result_filename
     else:
         print("序号错误，退出")
         time.sleep(3)
         sys.exit()
-    if not os.path.exists(file_name):
-        print("文件 {} 不存在，程序退出".format(file_name))
+
+    # 指定了pic_class往pic_class存，没指定按微博类型存
+    if pic_class is not None and isinstance(pic_class, str):
+        img_path = os.path.join(img_path, pic_class)
+    elif index == "1" or index == 1:
+        img_path = os.path.join(img_path, "imgs")
+    elif index == "2" or index == 2:
+        img_path = os.path.join(img_path, "r_imgs")
+    else:
+        print("序号错误，退出")
+        time.sleep(3)
+        sys.exit()
+
+    if not os.path.exists(weibo_result_filename):
+        print("文件 {} 不存在，程序退出".format(weibo_result_filename))
         time.sleep(3)
         sys.exit()
     if not os.path.exists(img_path):
-        os.mkdir(img_path)
+        os.makedirs(img_path)
 
-    weibo_file = read_json(file_name)
+    weibo_file = read_json(weibo_result_filename)
     img_urls_info = {}
 
     for weibo_info in weibo_file:
         bid = weibo_info["bid"]
-        content = weibo_info["content"].split("\n")[0]
-        user_name = weibo_info["user_name"]
-        index = 1
+        count = 1
         for img_url in weibo_info["img_list"]:
             # =================这里修改文件名和连接==============
-            img_ident = bid + "_" + str(index)
+            img_ident = bid + "_" + str(count)
             img_url = "https://wx3.sinaimg.cn/large/" + img_url.split("/")[-1] + ".jpg"
             img_urls_info[img_ident] = img_url
-            index += 1
+            count += 1
 
     # 读取已经下载好的图片
     downloaded_file = os.listdir(img_path)
@@ -100,8 +114,8 @@ def save_img(dir_path, index):
         if not img_ident in downloaded_file:
             img_urls_info2[img_ident] = img_urls_info[img_ident]
     print("读取到图片链接 {} 条，其中未下载的 {} 条".format(len(img_urls_info), len(img_urls_info2)))
-
-    input("按回车继续")
+    if ensure_ask:
+        input("按回车继续")
 
     img_num = len(img_urls_info2)
     count = 0
@@ -123,6 +137,8 @@ def save_img(dir_path, index):
 
 
 if __name__ == '__main__':
-    dir_path = "."
+    "放到结果文件夹下运行"
+    weibo_filepath = "."
+    img_path = "."
     index = input("要保存哪个文件中的图片链接，保存result.json输入1，保存r_result.json输入2\n")
-    save_img(dir_path, index)
+    save_img(weibo_filepath, img_path, index)
