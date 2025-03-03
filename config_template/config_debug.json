@@ -17,12 +17,6 @@
   "ensure_ask": 1,
   "debug": {
     "on": 1,
-    "page_start": -1,
-    "saved_key_file": [
-      "saved_key_file目前没什么用",
-      "pwb",
-      "wb",
-      "rwb"
-    ]
+    "page_start": -1
   }
 }

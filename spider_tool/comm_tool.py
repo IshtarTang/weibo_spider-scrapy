@@ -24,29 +24,25 @@ def cookiestoDic(str1):
     return result
 
 
-def get_log_path(id=0):
+def get_log_path(key_word="", log_dir="log"):
     """
-    生成一个日志路径，之后大概会改成传配置文件，按配置文件设路径
     :param id:
     :return:
     """
-    log_dir = "./log"
-    suffix = ".log"
-    base_filename = time.strftime("%m%d", time.localtime())
-
-    p_log_path = log_dir + "/" + base_filename + "_s{}" + suffix
-    if id:
-        log_path = p_log_path.format(id)
-        return log_path
+    date1 = time.strftime("%m%d", time.localtime())
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir)
+    if key_word:
+        ident = f"{key_word}_{date1}"
     else:
-        p_log_path = log_dir + "/" + base_filename + "_{}" + suffix
-        n = 1
-        while True:
-            log_path = p_log_path.format(n)
-            if not os.path.exists(log_path):
-                return log_path
-            else:
-                n += 1
+        ident = date1
+    n = 1
+    while True:
+        log_path = os.path.join(log_dir, f"{ident}_{n}.log")
+        if not os.path.exists(log_path):
+            return log_path
+        else:
+            n += 1
 
 
 def t_is_a_early_than_b(a, b, can_equal):
@@ -229,3 +225,9 @@ def get_last_wb_public_time(wb_file_path, user_id):
         return wbs[0]["public_timestamp"]
     except:
         return 0
+
+
+if __name__ == '__main__':
+    config = json.load(open("../configs/test.json", "r", encoding="utf-8"))
+    x = get_log_path(get_key_word(config))
+    print(x)

@@ -4,7 +4,7 @@ from spider_tool import comm_tool
 import os
 FEED_EXPORT_ENCODING = "gbk"
 
-LOG_LEVEL = 'DEBUG'
+LOG_LEVEL = 'INFO'
 # 指定Redis的主机名和端口
 REDIS_HOST = '127.0.0.1'
 REDIS_PORT = 6379
@@ -28,7 +28,6 @@ SCHEDULER_QUEUE_CLASS = 'scrapy_redis.queue.PriorityQueue'
 
 RETRY_TIMES = 4
 LOG_FILE = comm_tool.get_log_path()
-# LOG_FILE = "log/defualt.log"
 
 RETRY_HTTP_CODES = [500, 502, 503, 504, 522, 524, 408, 429, 400]
 

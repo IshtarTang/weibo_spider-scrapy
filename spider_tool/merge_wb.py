@@ -43,17 +43,20 @@ class MergeWbFile:
             with open(path1, "r", encoding="utf-8") as op:
                 lines = op.read().split("\n")
             df = pd.DataFrame(lines)
+            df = df[df[0] != ""]
             df.drop_duplicates(inplace=True)
             new_lines = df[0].values.tolist()
             with open(path1, "w", encoding="utf-8") as op:
                 op.write("\n".join(new_lines))
+                if new_lines:
+                    op.write("\n")
 
     def run(self):
         """
         流程
         先把prefile文件按行做一个去重,只去完全重复的行
         把prefile文件读出来,评论按点赞排,微博按时间排
-        子评论插父评论里,父评论插微博里
+        子评论插根评论里,根评论插微博里
 
         :return:
         """
@@ -62,20 +65,20 @@ class MergeWbFile:
 
         # 读取过程文件
         ccomms_str = open(self.ccomm_filepath, "r", encoding="utf-8").read()
-        rcomms_str: str = open(self.rcomm_filepath, "r", encoding="utf-8").read()
+        rcomms_str = open(self.rcomm_filepath, "r", encoding="utf-8").read()
         wb_str = open(self.weibo_filepath, "r", encoding="utf-8").read()
 
-        if not wb_str:
+        if not wb_str.strip():
             log_and_print("无微博，程序退出")
             return
         # 全部读成json
-        if ccomms_str:
+        if ccomms_str.strip():
             ccomm_dicts = [json.loads(str1) for str1 in ccomms_str.strip().split("\n")]
             ccomm_dicts = drop_duplicate(ccomm_dicts, "comment_id", print_info="ccomm")
         else:
             ccomm_dicts = []
 
-        if rcomms_str:
+        if rcomms_str.strip():
             rcomm_dicts = [json.loads(str1) for str1 in rcomms_str.strip().split("\n")]
             rcomm_dicts = drop_duplicate(rcomm_dicts, "comment_id", print_info="rcomm")
         else:
@@ -83,7 +86,7 @@ class MergeWbFile:
 
         wb_dict = [json.loads(str1) for str1 in wb_str.strip().split("\n")]
         wb_dict = drop_duplicate(wb_dict, "bid", print_info="weibo")
-        # 排序子评论,按父评论分组
+        # 排序子评论,按根评论分组
         ccomm_dicts = sort_dict(ccomm_dicts, "like_num", True)
         ccomm_dicts = classify_dicts(ccomm_dicts, "superior_id", print_info="ccomm")
 
