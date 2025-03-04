@@ -141,12 +141,12 @@ class MergeWbFile:
         logging.info("整合完成")
         logging.info("共计微博{}条".format(len(wb_list)))
         print("\n文件保存完毕，共计微博{}条".format(len(wb_list)))
-        # 清空临时文件
+        # 清空预存文件
         if self.ensure_ask:
-            input1 = input("是否清空临时文件（yes/no）")
+            input1 = input("是否清空预存文件（yes/no）")
 
             if input1 == "yes":
-                log_and_print("清空临时文件")
+                log_and_print("清空预存文件")
                 for t_filepaht in [self.weibo_filepath, self.rcomm_filepath, self.ccomm_filepath]:
                     if os.path.exists(t_filepaht):
                         os.remove(t_filepaht)
