@@ -38,7 +38,7 @@ def download_img(url, file_name, file_path):
     try:
         response = requests.get(url, headers=headers)
         content = response.content
-        with open(os.path.join(file_path,file_name) , "wb") as op:
+        with open(os.path.join(file_path, file_name), "wb") as op:
             op.write(content)
     except Exception as e:
         print(traceback.format_exc())
@@ -92,6 +92,10 @@ def save_img(weibo_filepath, img_path, index, pic_class=None, ensure_ask=1):
 
     weibo_file = read_json(weibo_result_filename)
     img_urls_info = {}
+    if index == 1 or index == "1":
+        username = weibo_file[0]["user_name"]
+        user_id = weibo_file[0]["user_id"]
+        print(f"开始保存 {username}[{user_id}] 发布的图片")
 
     for weibo_info in weibo_file:
         bid = weibo_info["bid"]
@@ -137,7 +141,6 @@ def save_img(weibo_filepath, img_path, index, pic_class=None, ensure_ask=1):
 
 
 if __name__ == '__main__':
-    "放到结果文件夹下运行"
     weibo_filepath = "."
     img_path = "."
     index = input("要保存哪个文件中的图片链接，保存result.json输入1，保存r_result.json输入2\n")

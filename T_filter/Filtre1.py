@@ -110,7 +110,7 @@ class RFPDupeFilter(BaseDupeFilter):
         str
 
         """
-        # 主要是这里用了自己写的生成key方式
+        # 只改了这里，用了自己写的生成key方式
         return request_fingerprint(request)
 
     def close(self, reason=''):

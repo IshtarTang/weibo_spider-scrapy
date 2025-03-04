@@ -14,9 +14,27 @@ from scrapy_weiboSpider.items import weiboItem, commentItem
 from spider_tool import comm_tool
 
 
+def write_json(obj1, filename="test.json"):
+    json.dump(obj1, open(filename, "w", encoding="utf-8"), indent=4, ensure_ascii=False)
+
+
 def timestamp_to_str(timestamp):
     return time.strftime("%Y-%m-%d %H:%M:%S",
                          time.localtime(timestamp / 1000))
+
+
+def log_and_print(message, log_level="info", print_end="\n"):
+    if log_level == "info" or log_level == "INFO":
+        logging.info(message)
+        print(message, end=print_end)
+    elif log_level == "warn" or log_level == "WARN":
+        logging.warning(message)
+        print(message, end=print_end)
+    elif log_level == "debug" or log_level == "DEBUG":
+        logging.debug(message)
+        print(message, end=print_end)
+    else:
+        print(message, end=print_end)
 
 
 class WeiboSpiderSpider(scrapy.Spider):
@@ -31,21 +49,20 @@ class WeiboSpiderSpider(scrapy.Spider):
 
     @classmethod
     def from_crawler(cls, crawler, *args, **kwargs):
-        settting = crawler.settings
-        config_path = settting["CONFIG_PATH"]
+        setting = crawler.settings
+        config_path = setting["CONFIG_PATH"]
         with open(config_path, "r", encoding="utf-8") as op:
             config_str = op.read()
         config = json.loads(config_str)
         # 如果完全不获取评论，对主页的请求会很快，间隔要加到1
         comm_config = config["get_comm_num"]
         if not any(comm_config.values()) and config["get_rwb_detail"] == 0:
-            print("本次运行不获取任何评论，请求间隔增加到 1s")
-            crawler.settings.update({"DOWNLOAD_DELAY": 1})
+            print("本次运行不获取源微博和任何评论，请求间隔增加到 1.5s")
+            crawler.settings.update({"DOWNLOAD_DELAY": 1.5})
 
         # 用配置文件弄出本次的redis_key更新到setting里
         keyword = comm_tool.get_key_word(config)
         crawler.settings.update({
-            "SCHEDULER_DUPEFILTER_KEY": f'{keyword}:dupefilter',
             "SCHEDULER_QUEUE_KEY": f"{keyword}:requests"}
         )
         logging.info(f"本次运行的配置文件为\n{config_str}")
@@ -57,9 +74,8 @@ class WeiboSpiderSpider(scrapy.Spider):
         self.config = json.load(open(config_path, "r", encoding="utf-8"))
         self.user_id = self.config["user_id"]
         self.key_word = comm_tool.get_key_word(self.config)
-        self.per_wb_path = comm_tool.get_result_filepath(self.config) + "/prefile/weibo.txt"
         self.wb_time_start_limit = 0
-        self.saved_key = []
+        self.saved_all_bid = set()
 
         self.extra_log_path = f"log{os.path.sep}extra"
         if not os.path.exists(self.extra_log_path):
@@ -99,7 +115,7 @@ class WeiboSpiderSpider(scrapy.Spider):
 
     def start(self):
         """
-        一些打印输出；读上次获取完成的微博，制成self.saved_key
+        一些打印输出；读上次获取完成的微博，制成self.saved_all_bid
         """
         print("\n本次运行的文件key为 {}".format(self.key_word))
         comm_config_str = {"wb_rcomm": "微博根评论", "wb_ccomm": "微博子评论", "rwb_rcomm": "源微博根评论",
@@ -109,43 +125,52 @@ class WeiboSpiderSpider(scrapy.Spider):
             get_comm_num = self.config["get_comm_num"][comm_config]
             print("    {}:{}".format(comm_config_str[comm_config],
                                      get_comm_num if get_comm_num != -1 else "all"))
-
-        # 录入之前的下载记录，打印输出（想搞避免重复爬取，但是用saved_key的没搞，目前只是一个计数的打印）
-        ########################
-        # 在这里加扫描记录功能
-        if os.path.exists(self.per_wb_path):
-            file1 = open(self.per_wb_path, "r", encoding="utf-8").read().strip()
-            if file1:
-                tmp_str = "[" + ",".join(file1.split("\n")) + "]"
-                file = json.loads(tmp_str)
-                for x in file:
-                    self.saved_key.append(x["bid"])
-                print("录入 {} 的微博下载记录".format(self.per_wb_path))
+        #############
+        # 录入之前的下载记录
+        #############
+        # saved_main_bid是打印用，只计算要爬的用户有多少微博，saved_all_bid是auto2模式去重用的
+        save_main_bid = set()
+        saved_path = comm_tool.get_result_filepath(self.config)
+        saved_wb_filepath = os.path.join(saved_path, "wb_result.json")
+        save_rwb_filepath = os.path.join(saved_path, "r_wb_result.json")
+        if os.path.exists(saved_wb_filepath):
+            saved_wb_data = json.load(open(saved_wb_filepath, "r", encoding="utf-8"))
+            for wb_info in saved_wb_data:
+                self.saved_all_bid.add(wb_info["bid"])
+                save_main_bid.add(wb_info["bid"])
+            if save_main_bid:
+                log_and_print(
+                    f"\n录入 {saved_wb_filepath} 的微博下载记录\n读取到上次运行保存的微博{len(self.saved_all_bid)}条")
             else:
-                print("{} 无记录".format(self.per_wb_path))
+                log_and_print(f"\n{saved_wb_filepath} 为空，无上次运行记录")
 
-        self.saved_key = list(set(self.saved_key))
-        if self.saved_key:
-            print("读取到上次运行保存的微博{}条".format(len(self.saved_key)))
-        else:
-            print("未读取到上次的记录")
+        if os.path.exists(save_rwb_filepath):
+            saved_r_wb_data = json.load(open(save_rwb_filepath, "r", encoding="utf-8"))
+            for r_wb_info in saved_r_wb_data:
+                self.saved_all_bid.add(r_wb_info["bid"])
 
+        ##############
+        # 时间限制设定
+        #############
         time_limit_config = self.config.get("time_limit", 0)
-        print("时间限制设定为", self.wb_time_start_limit)
-
+        print("时间限制设定为", time_limit_config)
         # 只获取 now - 设定时间的微博
         if time_limit_config == "auto":  # 自动模式，读取之前获取的最后一条微博时间，此前的微博不再次获取
-            self.wb_time_start_limit = comm_tool.get_last_wb_public_time(self.per_wb_path, self.user_id)
+            self.wb_time_start_limit = comm_tool.get_last_wb_public_time(saved_wb_filepath)
             if self.wb_time_start_limit == 0:  # 没有进度文件
-                print("已启动自动时间限制，未检查到记录文件，将获取所有微博")
+                log_and_print("已启动自动时间限制，未检查到记录文件，将获取所有微博")
             else:  # 有进度文件
                 wb_time_start_limit_str = time.strftime("%Y-%m-%d %H:%M:%S",
                                                         time.localtime(self.wb_time_start_limit / 1000))
-                print(f"已启动自动时间限制，本次将获取 now - {wb_time_start_limit_str} 的微博到文件中")
+                log_and_print(f"已启动自动时间限制，本次将获取 now - {wb_time_start_limit_str} 的微博到文件中")
         elif time_limit_config == "auto2":
-            pass
+            # auto2模式是按已保存过的bid判断的，不做时间限制
+            self.wb_time_start_limit = 0
+            log_and_print(f"已启用auto2模式，本次将获取所有 {saved_wb_filepath} 和 {save_rwb_filepath} 未保存的微博")
+
+
         elif (isinstance(time_limit_config, str)
-              and re.search("[12]\d\d\d-[012]\d-[01 23]\d [012]\d:[012345]\d",
+              and re.search(r"[12]\d\d\d-[012]\d-[0123]\d [012]\d:[012345]\d",
                             str(time_limit_config))):  # 手动模式，yyyy-mm-dd hh:MM格式
             self.wb_time_start_limit = int(time.mktime(time.strptime(time_limit_config, "%Y-%m-%d %H:%M")) * 1000)
             print(f"已启动手动时间限制，配置类型str，本次将获取 now - {time_limit_config} 的微博到文件中")
@@ -174,8 +199,7 @@ class WeiboSpiderSpider(scrapy.Spider):
             debug_start_page = self.config["debug"].get("page_start", -1)
             if debug_start_page != -1:
                 start_page = debug_start_page
-                print(f"【debug项】 起始页为 {debug_start_page}")
-                logging.info(f"【debug项】 起始页为 {debug_start_page}")
+                log_and_print(f"【debug项】 起始页为 {debug_start_page}")
 
         start_url = "https://weibo.com/ajax/statuses/mymblog?" \
                     "uid={}&page={}&feature=0".format(self.user_id, start_page)
@@ -191,8 +215,7 @@ class WeiboSpiderSpider(scrapy.Spider):
         不过微博列表没获取到应该是整页都无效，如果出这个问题我再来处理
         """
         page = int(response.request.url.split("page=")[1].split("&")[0])
-        print("已请求page {} 页面".format(page), end="\t")
-        logging.info("已请求page {} ".format(page))
+        log_and_print("已请求page {} 页面".format(page), print_end="\t")
 
         content = response.text
         j_data = json.loads(content)
@@ -201,10 +224,9 @@ class WeiboSpiderSpider(scrapy.Spider):
 
         # 调试项，页数限制
         if self.config.get("debug", {}).get("on", {}):
-            page_limt = self.config["debug"].get("page_limit", -1)
-            if page_limt != -1 and page >= page_limt:
-                print(f"【debug项】 页数限制{page_limt}，结束获取")
-                logging.info(f"【debug项】 页数限制{page_limt}，结束获取")
+            page_limit = self.config["debug"].get("page_limit", -1)
+            if page_limit != -1 and page >= page_limit:
+                log_and_print(f"【debug项】 页数限制{page_limit}，结束获取")
                 return
 
         # 本页未获取到微博list
@@ -221,9 +243,9 @@ class WeiboSpiderSpider(scrapy.Spider):
 
                 yield request
             else:
-                messsage = f"page{page} 无法获取到正文，当前重试次数{response.meta['my_count']}，停止获取主页"
-                logging.warning(messsage)
-                print(messsage)
+                message = f"page{page} 无法获取到正文，当前重试次数{response.meta['my_count']}，停止获取主页"
+                logging.warning(message)
+                print(message)
             return
 
         # 时间限制功能
@@ -236,10 +258,8 @@ class WeiboSpiderSpider(scrapy.Spider):
             current_page_latest_timestamp = max(weibos_create_at) * 1000  # 微博用的毫秒时间戳
             # 如果本页最新一条比限制时间早，直接截断
             if current_page_latest_timestamp <= self.wb_time_start_limit:
-                message = "时间限制{}，当前页面最新微博时间 {}，主页获取结束".format(
-                    timestamp_to_str(self.wb_time_start_limit), timestamp_to_str(current_page_latest_timestamp))
-                logging.info(message)
-                print(message)
+                log_and_print("时间限制{}，{}页最新微博时间 {}，主页获取结束".format(
+                    timestamp_to_str(self.wb_time_start_limit), page, timestamp_to_str(current_page_latest_timestamp)))
                 return
 
         # 本页面的解析
@@ -253,18 +273,38 @@ class WeiboSpiderSpider(scrapy.Spider):
             # 循环，塞方法里解析
             exist_null_wb = 0
             for wb_info in wb_list:
-                item_and_request_generator = self.parse_wb(wb_info, self.config.get("get_rwb_detail", 1))
-                for item_or_request in item_and_request_generator:
-                    yield item_or_request
-                # 标志这一页是否存在1条或以上
-                if not item_and_request_generator:
+                if "赞过" in wb_info.get("title", {}).get("text", ""):
+                    # 过滤掉主页的点赞
+                    continue
+                ele_generator = self.parse_wb(wb_info, self.config.get("get_rwb_detail", 1))
+                tmp_ele = next(ele_generator)
+                if tmp_ele is None:
+                    # 啥都没有说明这条解析大失败，打个标，出循环把整页信息留个档
                     exist_null_wb = 1
+                    del ele_generator
+                elif isinstance(tmp_ele, str):
+                    # str会描述为什么这条不解析
+                    log_and_print(tmp_ele, "debug")
+                    del ele_generator
+                elif isinstance(tmp_ele, weiboItem) or isinstance(tmp_ele, Request):
+                    # 正常解析出item和url，一条一条扔过去
+                    yield tmp_ele
+                    for ele in ele_generator:
+                        yield ele
+                else:
+                    message = "微博解析部分出了问题，你返回了个啥赶紧查一下"
+                    logging.error(message, tmp_ele)
+                    print(message, tmp_ele)
+
             if exist_null_wb:
                 info_filename = f"{self.config['user_id']}_{page}_{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}.json"
                 info_path = os.path.join(self.extra_log_path, info_filename)
+                with open(info_path, "w", encoding="utf-8") as op:
+                    op.write(json.dumps(self.config))
+                    op.write(f"page {page}")
+                    op.write(content)
                 logging.warning(
                     f"page {page} 出现完全无法获取的微博，本页请求链接{response.request.url}，本页响应链接{response.url}\n本页完整信息保存于{info_path}")
-                json.dump(wb_list, open(info_path, "w", encoding="utf-8"), indent=4, ensure_ascii=False)
 
         # 翻页
         since_id = j_data["data"]["since_id"]
@@ -273,7 +313,7 @@ class WeiboSpiderSpider(scrapy.Spider):
             next_url = "https://weibo.com/ajax/statuses/mymblog?" \
                        "uid={}&page={}&feature=0&since_id={}".format(self.user_id, page + 1, since_id)
             yield Request(next_url, callback=self.get_mymblog_page, meta={"my_count": 0},
-                          dont_filter=True, priority=1, cookies=self.cookies, headers=self.blog_headers)
+                          dont_filter=True, cookies=self.cookies, headers=self.blog_headers)
 
         # 网络出问题时有可能获取不到下一页，加个标重试
         elif meta["my_count"] < 5:
@@ -312,11 +352,11 @@ class WeiboSpiderSpider(scrapy.Spider):
             for c_or_i in commItem_and_rcommReqs:
                 yield c_or_i
             comm_count += 1  # 确认送去解析再 +1
-        print("获取到{} comm {} 条，上级为 {}，重试{}次".format(comm_type, len(comms), superior_id,
-                                                              meta.get("failure_with_max_id", 0)))
+        print("获取到{} comm {} 条，上级为 {}，重试{}次".
+              format(comm_type, len(comms), superior_id, meta.get("failure_with_max_id", 0)))
         logging.debug(
-            "获取到{} comm {} 条，上级为 {}，重试{}次".format(comm_type, len(comms), superior_id,
-                                                            meta.get("failure_with_max_id", 0)))
+            "获取到{} comm {} 条，上级为 {}，重试{}次".
+            format(comm_type, len(comms), superior_id, meta.get("failure_with_max_id", 0)))
 
         # #### 以下是翻页部分 ##########
         # 确定评论限制多少数量
@@ -370,14 +410,15 @@ class WeiboSpiderSpider(scrapy.Spider):
                         return
 
                 else:
-                    message = f"评论 {response.url} 未获取到内容，上级链接{superior_id}，类型{comm_type}，下个链接{next_url}，当前内容 \n{content}"
+                    message = (f"评论 {response.url} 未获取到内容，上级链接{superior_id}，"
+                               f"类型{comm_type}，下个链接{next_url}，当前内容 \n{content}")
                     logging.warning(message)
                     print(message)
 
-            yield Request(next_url, callback=self.get_comm, priority=2,  # 这里用了目前最高的优先级
+            yield Request(next_url, callback=self.get_comm, priority=15,  # 这里用了高优先级
                           meta=next_meta, dont_filter=True, cookies=self.cookies, headers=self.comm_headers, )
         if comm_count >= comm_limit and comm_limit != -1:
-            logging.info(
+            logging.debug(
                 "{}/{} {}已经获取足够评论条数 get {} limit{}"
                 .format(user_id, superior_id, response.url, comm_count, comm_limit))
 
@@ -389,15 +430,39 @@ class WeiboSpiderSpider(scrapy.Spider):
         """
         content = response.text
         wb_info = json.loads(content)
-        item_and_request = self.parse_wb(wb_info, self.config.get("get_rwb_detail", 1))
-        for i_or_r in item_and_request:
-            yield i_or_r
+        ele_generator = self.parse_wb(wb_info, self.config.get("get_rwb_detail", 1))
+        tmp_ele = next(ele_generator)
+        if tmp_ele is None:
+            # 啥都没有说明这条解析大失败
+            del ele_generator
+            # 有一些微博直接看不了，但是在转发里能看到 例：OuOJfjgfu
+            # 传到这里的有一些是从转发微博来的，meta里会带被转微博的信息
+            # 带了的话就把带的部分解析出来
+            meta = response.meta
+            retweeted_status = meta.get("retweeted_status", {})
+            if retweeted_status:
+                log_and_print(f"微博 {response.request.url} 获取失败，将对携带的retweeted信息进行解析", "warn")
+                retweeted_item = self.parse_wb_simple(retweeted_status, weiboItem())
+                yield retweeted_item
+            else:
+                log_and_print(f"微博 {response.request.url} 获取失败", "warn")
+                return
+        elif isinstance(tmp_ele, str):
+            # str会描述为什么这条不解析
+            log_and_print(tmp_ele, "debug")
+            del ele_generator
+        elif isinstance(tmp_ele, weiboItem) or isinstance(tmp_ele, Request):
+            # 正常解析出item和url，一条一条扔过去
+            yield tmp_ele
+            for ele in ele_generator:
+                yield ele
 
     def parse_wb_simple(self, wb_info, wb_item, owb_url=""):
         """
         解析微博信息的一部分，可以是一条完整的也可以是转发页retweeted_status里的
         :param wb_info:从微博那扣来的，可以是完整信息也可以是retweeted_status
-        :param wb_item:  wb_itme
+        :param wb_item:  可以是空的也可以是有一些数据的
+        :param owb_url: 用来标识被转发微博是被哪条转发的，但是最后没加进去
         :return:加了解析出内容的wb_item
         """
         wb_item["remark"] = ""
@@ -409,8 +474,7 @@ class WeiboSpiderSpider(scrapy.Spider):
             wb_item["user_id"] = user_id  # 用户id
         except:
             # bid和用户id获取不到说明这条微博完全无法看到
-            print("出现完全无法解析的微博，详见日志")
-            logging.warning(f"出现完全无法解析的微博，上阶段信息{wb_info}")
+            logging.warning(f"{time.time()} 出现完全无法解析的微博，上阶段信息{wb_info}")
             return
 
         wb_item["wb_url"] = "https://weibo.com/{}/{}".format(wb_item["user_id"], wb_item["bid"])
@@ -467,16 +531,30 @@ class WeiboSpiderSpider(scrapy.Spider):
 
     def parse_wb(self, wb_info: dict, get_rwb_detail):
         """
+        微博内容完全解析
         从响应的json里把需要的部分扣出来，做成item
         :param wb_info:
         :param get_rwb_detail: 要不要搞完整的源微博数据
-        :return:
+        :return:三种情况，正常解析的反回含weibo_item和r_weibo&comm请求的迭代器，解析失败反回None，由于设置跳过当前微博的解析反回str
         """
-        wb_item = weiboItem()
+        # 时间限制功能
+        user_id = wb_info.get("user", {}).get("idstr", "")
+        if self.wb_time_start_limit and user_id == self.config["user_id"]:
+            created_at = wb_info.get("created_at", "Thu Jan 01 00:00:00 +0000 1970")
+            create_timestamp = datetime.strptime(created_at, '%a %b %d %X %z %Y').timestamp() * 1000
+            if create_timestamp < self.wb_time_start_limit:
+                yield f"当前微博 {wb_info['mblogid']} ，发布时间 {timestamp_to_str(create_timestamp)}，时间限制 {timestamp_to_str(self.wb_time_start_limit)}，跳过本条微博解析"
+        # auto2模式
+        if self.config.get("time_limit", 0) == "auto2":
+            bid = wb_info.get('mblogid', "")
+            if bid in self.saved_all_bid:
+                yield f"auto2：当前微博 {bid} 已在文件中，跳过本条微博解析"
 
+        wb_item = weiboItem()
         wb_item = self.parse_wb_simple(wb_info, wb_item)
         if not wb_item:
             # 没获取到bid才会返回空，说明这条微博完全获取不到
+            yield None
             return
 
         user_id = wb_item["user_id"]
@@ -500,7 +578,8 @@ class WeiboSpiderSpider(scrapy.Spider):
             yield Request(comm_url, callback=self.get_comm,
                           meta={"superior_id": bid, "user_id": user_id, "comm_type": "root",
                                 "comm_count": 0, "my_count": 0},
-                          cookies=self.cookies, headers=self.comm_headers, dont_filter=False)  # 这里是会去重的，单次运行时每条微博的评论只获取一次
+                          cookies=self.cookies, headers=self.comm_headers,
+                          dont_filter=False)  # 这里是会去重的，单次运行时每条微博的评论只获取一次
 
         # 是否是转发微博，转发的记录r_href，源微博送去单条解析
         r_href = ""
@@ -519,9 +598,10 @@ class WeiboSpiderSpider(scrapy.Spider):
                 r_info_url = "https://weibo.com/ajax/statuses/show?id=" + r_bid
                 if get_rwb_detail:  # 是否获取源微博详情，默认获取，进行一次请求
                     print("{}的源微博为 {}，准备进行详细解析".format(wb_item["wb_url"], r_wb_url))
-                    yield Request(r_info_url, callback=self.get_single_wb, cookies=self.cookies,
-                                  headers=self.blog_headers,
-                                  meta={"count": 0}, dont_filter=True)
+                    yield Request(r_info_url, callback=self.get_single_wb,
+                                  cookies=self.cookies, headers=self.blog_headers,
+                                  meta={"count": 0, "retweeted_status": wb_info["retweeted_status"]},
+                                  dont_filter=False)
                 else:  # 源微博走简单解析
                     print("{}的源微博为 {}，准备进行simple parse".format(wb_item["wb_url"], r_wb_url))
                     wb_item["remark"] += "设置为不获取详细源微博"
@@ -538,8 +618,8 @@ class WeiboSpiderSpider(scrapy.Spider):
 
         if not wb_item["is_original"]:
             # 转发的不会超过字数，直接送去入库
-            print("{} r解析完毕:{}".format(wb_item["wb_url"], wb_item["content"][:10]))
-            logging.debug("{} r解析完毕:{}".format(wb_item["wb_url"], wb_item["content"][:10]))
+            message = "{} r解析完毕:{}".format(wb_item["wb_url"], wb_item["content"][:10].replace("\n", "\t"))
+            log_and_print(message, "DEBUG")
             yield wb_item
         else:
             # 原创的要做字数判断，过长的要单独一个请求获取完整内容
@@ -584,7 +664,7 @@ class WeiboSpiderSpider(scrapy.Spider):
         comm_item["date"] = create_time
         try:
             comm_item["like_num"] = comm_info["like_counts"]
-        except:
+        except KeyError:
             comm_item["like_num"] = -1
             logging.warning(f"点赞解析失败，设为-1，上级id {superior_id},类型 {comm_type}，当前comm {comm_info}")
         comm_item["img_url"] = ""
@@ -593,11 +673,15 @@ class WeiboSpiderSpider(scrapy.Spider):
         if comm_info.get("url_struct", []):
             links_info = comm_info["url_struct"]
             for link_info in links_info:
-                links.append(link_info.get("ori_url", ""))
+                link = link_info.get("ori_url", "")
+                if not link:
+                    link = link_info.get("long_url", "")
+                links.append(link)
+                if not link:
+                    logging.warning(f"评论配图解析失败，上级id {superior_id},类型 {comm_type}，当前comm {comm_info}")
 
         comm_item["link"] = links
-        result_list = []  # 返回值
-        result_list.append(comm_item)
+        result_list = [comm_item]  # 返回值
         this_comm_num += 1
         # 是否要获取子评论
         if comm_type == "root":
@@ -636,8 +720,8 @@ class WeiboSpiderSpider(scrapy.Spider):
                 content = j_data["data"]["longTextContent"]
                 wb_item["content"] = content
             yield wb_item
-            print("{} 解析完毕:{}".format(wb_item["wb_url"], content[:10]))
-            logging.debug("{} 解析完毕:{}".format(wb_item["wb_url"], content[:10]))
+            message = "{} 解析完毕:{}".format(wb_item["wb_url"], content[:10].replace("\n","\t"))
+            log_and_print(message,"DEBUG")
 
         elif j_data["ok"]:
             # 判断是否长微博是用长度判断的，可能出现误判，获取长文本未返回数据

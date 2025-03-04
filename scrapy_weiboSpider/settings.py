@@ -2,6 +2,7 @@
 import json
 from spider_tool import comm_tool
 import os
+
 FEED_EXPORT_ENCODING = "gbk"
 
 LOG_LEVEL = 'INFO'
@@ -11,16 +12,18 @@ REDIS_PORT = 6379
 
 CONFIG_PATH = f"configs{os.sep}dufault_config.json"
 
+DEPTH_PRIORITY = -1
 # redis key
 redis_key = comm_tool.get_key_word(json.load(open(CONFIG_PATH, "r", encoding="utf-8")), False)
-SCHEDULER_DUPEFILTER_KEY = 'weibo_default:dupefilter'
 SCHEDULER_QUEUE_KEY = "weibo_default:requests"
 
 SCHEDULER = "scrapy_redis.scheduler.Scheduler"
+# 这里不走scrapy的过滤
 # DUPEFILTER_CLASS = "scrapy_redis.dupefilter.RFPDupeFilter"
-# 这里不走scrapy的过滤，如果结果文件里没有上次的记录是需要重复爬的
-# DUPEFILTER_CLASS = "scrapy.dupefilters.RFPDupeFilter"
-DUPEFILTER_CLASS = "T_filter.Filtre1.RFPDupeFilter"
+# "SCHEDULER_DUPEFILTER_KEY": f'{keyword}:dupefilter',
+
+DUPEFILTER_CLASS = "scrapy.dupefilters.RFPDupeFilter"
+# DUPEFILTER_CLASS = "T_filter.Filtre1.RFPDupeFilter"
 # 关闭时保留调度器和去重记录
 SCHEDULER_PERSIST = True
 # 调度策略

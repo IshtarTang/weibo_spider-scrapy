@@ -11,19 +11,21 @@ import json
 import logging
 import time
 from spider_tool import comm_tool
+from datetime import datetime
+from twisted.internet import reactor
 
 
 class MyCountDownloaderMiddleware(object):
 
-    def __init__(self,config_path):
+    def __init__(self, config_path, crawler):
+        self.crawler = crawler
         config = json.load(open(config_path, "r", encoding="utf-8"))
         self.cookies = comm_tool.cookiestoDic(config["cookies_str"])
-    
+
     @classmethod
     def from_crawler(cls, crawler):
         CONFIG_PATH = crawler.settings.get('CONFIG_PATH')
-        return cls(CONFIG_PATH)
-
+        return cls(CONFIG_PATH, crawler)
 
     def process_response(self, request, response, spider):
         """
@@ -39,17 +41,25 @@ class MyCountDownloaderMiddleware(object):
         try:
             j_data = json.loads(response.text)
         except:
+            # 带my_count的请求正常返回的数据都是json格式，到这就是出了毛病被丢了个Html回来
             request.meta["my_count"] += 1
             # 登录失效，一般是程序中断一段时间后再运行，库里取出来的还是旧cookies，这里更新cookies再重试
             if "passport" in response.url or "login" in response.url:
                 logging.warning(f"{request.url} cookies过期，使用文件中的cookies")
                 request.cookies = self.cookies
                 return request
+            elif response.status == 414:
+                logging.warning(f"{request.url} 请求频繁，爬取程序暂停5分钟")
+                print(datetime.now().strftime("%Y-%m-%d %H:%M"), f"{request.url} 请求频繁，爬取程序暂停5分钟")
+                self.crawler.engine.pause()
+                reactor.callLater(300, self.crawler.engine.unpause)
+                return request
             else:
-                logging.warning(f"{response.url}解析内容出错，当前文本 {response.text}")
+                # 不知道发生啥了，查出问题再添
+                logging.error(f"{response.url}解析内容出错，当前文本 {response.text}")
                 print(f"{response.url}解析内容出错，当前文本 {response.text}")
+                return response
 
-            return request
         # 请求正常，无事发生
         if j_data["ok"] == 1:
             return response
@@ -58,8 +68,10 @@ class MyCountDownloaderMiddleware(object):
         elif my_count < 5:
             # 失败次数不超过5，+1重试
             request.meta["my_count"] += 1
-            logging.info("响应中data无效，{} 已重新获取{}次".format(request.url, request.meta["my_count"]))
-            print("响应中data无效，{} 已重新获取{}次".format(request.url, request.meta["my_count"]))
+            message = "响应中data无效，{} ok={}已重新获取{}次".format(request.url, j_data["ok"],
+                                                                     request.meta["my_count"])
+            logging.info(message)
+            print(message)
             time.sleep(1)
             return request
         elif my_count > 5 and my_count < 10:
