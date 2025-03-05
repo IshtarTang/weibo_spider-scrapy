@@ -12,6 +12,7 @@ import msvcrt
 import logging
 from scrapy_weiboSpider.items import weiboItem, commentItem
 from spider_tool import comm_tool
+import redis
 
 
 def write_json(obj1, filename="test.json"):
@@ -49,6 +50,7 @@ class WeiboSpiderSpider(scrapy.Spider):
 
     @classmethod
     def from_crawler(cls, crawler, *args, **kwargs):
+        # spider = super().from_crawler(crawler, *args, **kwargs)
         setting = crawler.settings
         config_path = setting["CONFIG_PATH"]
         with open(config_path, "r", encoding="utf-8") as op:
@@ -66,20 +68,30 @@ class WeiboSpiderSpider(scrapy.Spider):
             "SCHEDULER_QUEUE_KEY": f"{keyword}:requests"}
         )
         logging.info(f"本次运行的配置文件为\n{config_str}")
+        spider = cls(setting)
+        spider._set_crawler(crawler)
+        return spider
 
-        return cls(config_path)
-
-    def __init__(self, config_path, *args, **kwargs):
+    def __init__(self, settings, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.config = json.load(open(config_path, "r", encoding="utf-8"))
+        self.config = json.load(open(settings["CONFIG_PATH"], "r", encoding="utf-8"))
         self.user_id = self.config["user_id"]
         self.key_word = comm_tool.get_key_word(self.config)
         self.wb_time_start_limit = 0
         self.saved_all_bid = set()
-
         self.extra_log_path = f"log{os.path.sep}extra"
         if not os.path.exists(self.extra_log_path):
             os.makedirs(self.extra_log_path)
+
+        continue_previous_run = 0
+        redis_host = settings.get("REDIS_HOST", '127.0.0.1')
+        redis_port = settings.getint("REDIS_PORT", 6379)
+        r = redis.StrictRedis(host=redis_host, port=redis_port, db=0, decode_responses=True)
+        redis_requests_key = settings.get("SCHEDULER_QUEUE_KEY", "")
+        if r.zcard(redis_requests_key) > 0:
+            log_and_print("检测到redis中有上次运行未完成的请求，将继续上次的爬取\n本次运行不会重新开始请求主页")
+            continue_previous_run = 1
+        self.continue_previous_run = continue_previous_run
 
         self.cookies = comm_tool.cookiestoDic(self.config["cookies_str"])
 
@@ -193,6 +205,9 @@ class WeiboSpiderSpider(scrapy.Spider):
 
     def start_requests(self):
         self.start()
+        # redis里有上次没运行完的，这次不会再从主页翻
+        if self.continue_previous_run:
+            return
         start_page = 1
         # 调试项，设定起始页
         if self.config.get("debug", {}).get("on", {}):
@@ -631,8 +646,8 @@ class WeiboSpiderSpider(scrapy.Spider):
                               cookies=self.cookies, headers=self.blog_headers,
                               meta={"wb_item": wb_item, "count": 0, "my_count": 0}, dont_filter=True)
             else:
-                print("{} 解析完毕:{}".format(wb_item["wb_url"], wb_item["content"][:10]))
-                logging.debug("{} 解析完毕:{}".format(wb_item["wb_url"], wb_item["content"][:10]))
+                message = "{} 解析完毕:{}".format(wb_item["wb_url"], wb_item["content"][:10].replace("\n", "\t"))
+                log_and_print(message, "debug")
                 yield wb_item
 
     def parse_comm(self, comm_info: dict, superior_id, user_id, comm_type):
@@ -720,8 +735,8 @@ class WeiboSpiderSpider(scrapy.Spider):
                 content = j_data["data"]["longTextContent"]
                 wb_item["content"] = content
             yield wb_item
-            message = "{} 解析完毕:{}".format(wb_item["wb_url"], content[:10].replace("\n","\t"))
-            log_and_print(message,"DEBUG")
+            message = "{} 解析完毕:{}".format(wb_item["wb_url"], content[:10].replace("\n", "\t"))
+            log_and_print(message, "DEBUG")
 
         elif j_data["ok"]:
             # 判断是否长微博是用长度判断的，可能出现误判，获取长文本未返回数据
