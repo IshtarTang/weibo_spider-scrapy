@@ -104,10 +104,21 @@ pipline生成结果文件一点优化
 
 2025.03.04
 加了auto2模式
+设成了深度优先
 
+2025.03.05
+如果redis中有上次未完成的请求，本次运行不会重新开始请求主页
 
-要写
-转发可，直看不可 https://weibo.com/6538975046/OuOJfjgfu
+2025.07.21
+修了之前其实不能完整获取ccomm、rcomm和ccomm的问题
+测试性的往里硬塞了爬收藏功能，完全没有写任何配套，我晚点会修的
+
+2025.07.23
+拆分出中间件JsonFieldRetryMiddleware，用于判断json响应中是否包含需要的字段
+拆分出中间件LoginStatusMiddleware，用于处理登cookies过期
+拆分出中间件ResponseStatusHandlerMiddleware，目前只用于处理请求频繁414状态码
+MyCountDownloaderMiddleware改为Ok1RetryMiddleware，检查响应中的json数据中是否包含{"ok":1}
+
 
 问题记录（微博的问题，不是我的）
 部分微博根评论无法完全获取，根评论在获取到一定数量后会开始有一个很迷的逻辑，会返回有max_id但没有data的数据，要继续用新的max_id请求到第15次才会返回有内容的（太离谱了我感觉我以后自己看到都不信所以截了图在留档里），而且继续往后翻一些之后data会一直为空

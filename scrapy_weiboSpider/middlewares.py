@@ -12,11 +12,43 @@ import logging
 import time
 from spider_tool import comm_tool
 from datetime import datetime
-from twisted.internet import reactor
+from twisted.internet import reactor, defer
 
 
-class MyCountDownloaderMiddleware(object):
+class ResponseStatusHandlerMiddleware:
 
+    def __init__(self, crawler):
+        self.crawler = crawler
+        self._paused = False
+
+    @classmethod
+    def from_crawler(cls, crawler):
+        return cls(crawler)
+
+    def process_response(self, request, response, spider):
+        if response.status == 414:
+            if self._paused:
+                return request.copy()
+            else:
+                self._paused = True
+                message = f"{datetime.now().strftime('%Y-%m-%d %H:%M')}, {request.url} 请求频繁，爬取程序暂停5分钟"
+                spider.logger.warning(f"{request.url} {message}")
+                print(f"{request.url} {message}")
+                self.crawler.engine.pause()
+
+                def resume():
+                    self._paused = False
+                    self.crawler.engine.unpause()
+                    print("爬取程序已恢复运行")
+                    spider.logger.info("爬取程序已恢复运行")
+
+                reactor.callLater(300, resume)
+                return request.copy()
+
+        return response
+
+
+class LoginStatusMiddleware:
     def __init__(self, config_path, crawler):
         self.crawler = crawler
         config = json.load(open(config_path, "r", encoding="utf-8"))
@@ -24,74 +56,163 @@ class MyCountDownloaderMiddleware(object):
 
     @classmethod
     def from_crawler(cls, crawler):
-        CONFIG_PATH = crawler.settings.get('CONFIG_PATH')
-        return cls(CONFIG_PATH, crawler)
+        return cls(crawler.settings.get('CONFIG_PATH'), crawler)
+
+    def process_response(self, request, response, spider):
+        """
+        处理登录失效
+        一般是程序中断一段时间后再运行，库里取出来的还是旧cookies
+        更新cookies再重试就行
+        :param request:
+        :param response:
+        :param spider:
+        :return:
+        """
+        request_url = request.url
+        response_url = response.url
+        if ("passport" in response_url or "login" in response_url) and \
+                ("passport" not in request_url and "login" not in request_url):
+            retry_key = 'login_retry_count'
+            retry_count = request.meta.get(retry_key, 0)
+
+            if retry_count >= 1:
+                spider.logger.error(f"[LoginStatus] 登录状态修复失败，请检查文件中的cookies是否过期")
+                return response
+
+            logging.warning(f"{request.url} cookies过期，使用文件中的cookies")
+            new_request = request.copy()
+            new_request.cookies = self.cookies
+            new_request.meta[retry_key] = retry_count + 1
+
+            return new_request
+        return response
+
+
+class JsonFieldRetryMiddleware:
+    """
+    检查返回的json里是否含有某个字段
+    启用方式为在meta中设置{json_field_retry:[[k1],[k3,k4],...]}
+    中间件会检查返回的json数据中是否有j_data[k1]和j_data[k3][k4]，只要缺失一个就会重试该请求
+    """
+
+    def __init__(self, max_retries=5):
+        self.max_retries = max_retries
+
+    @classmethod
+    def from_crawler(cls, crawler):
+        return cls(
+            max_retries=crawler.settings.getint('JSON_FIELD_RETRY_MAX_RETRIES', 5)
+        )
+
+    def process_response(self, request, response, spider):
+        json_field_retry = request.meta.get("json_field_retry", "")
+        # 带这个配置才走这个中间件
+        if not json_field_retry:
+            return response
+
+        try:
+            j_data = json.loads(response.text)
+        except Exception as e:
+            spider.logger.warning(
+                f"[JsonFieldRetry]:该请求未返回json格式数据，跳过该次字段检查\n请求连接：{request.url}\n响应连接：{response.url}\n{e}")
+            return response
+
+        extra_log = ""
+        if request.callback == spider.get_mymblog_page:
+            extra_log = "翻页结束"
+
+        # 检查json数据中是否存在某字段且非空
+        def field_exists(j_data, path: list):
+            cur = j_data
+            for key in path:
+                if not isinstance(cur, dict) or key not in cur:
+                    return False
+                cur = cur[key]
+            # 空值判定
+            if cur in (None, '', [], {}):
+                return False
+            return True
+
+        retry_count_key = "json_field_retry_count"
+        for field_path in json_field_retry:
+            # 检查是否有要求的字段，没有就检查请求重复次数，超过次数就放弃
+            if not field_exists(j_data, field_path):
+                retry_count = request.meta.get(retry_count_key, 0)
+                if retry_count < self.max_retries:
+                    spider.logger.warning(
+                        f"[JsonFieldRetry]:字段缺失或空: {'.'.join(field_path)}，\n请求连接：{request.url}\n响应连接：{response.url}\n重试 {retry_count + 1}/{self.max_retries}")
+                    new_request = request.copy()
+                    new_request.meta[retry_count_key] = retry_count + 1
+                    return new_request
+                else:  # 重试几次还是没这个字段
+                    allow_empty = request.meta.get("json_field_retry_allow_empty", False)
+                    if allow_empty:
+                        message = f"[JsonFieldRetry]字段缺失或空: {'.'.join(field_path)}，超过最大重试次数,但该请求标记为允许字段为空，将继续处理" \
+                                  f"\n请求连接：{request.url}" \
+                                  f"\n响应连接：{response.url}"
+                        spider.logger.info(message)
+                        print(message)
+                    else:
+                        message = f"[JsonFieldRetry] 字段缺失或空: {'.'.join(field_path)}，超过最大重试次数，放弃重试" \
+                                  f"\n请求连接：{request.url}" \
+                                  f"\n响应连接：{response.url}"
+                        spider.logger.error(message)
+                        print(message)
+                    return response
+
+        return response
+
+
+class Ok1RetryMiddleware(object):
+
+    def __init__(self, crawler):
+        self.crawler = crawler
+
+    @classmethod
+    def from_crawler(cls, crawler):
+        return cls(crawler)
 
     def process_response(self, request, response, spider):
         """
         新版微博返回的json数据中有个{"ok":1}用来表示获取成功
         这个中间件用来检查ok是否为1，不为1会重新请求
-        默认不检查，如果需要检查，在meta中加{"my_count": 0}
+        在meta中设置{"ok1_retry": 0}启用该检查
         """
         meta = request.meta
-        my_count = meta.get("my_count", -1)
-        # 不需检查
-        if my_count == -1:
+        ok1_retry = meta.get("ok1_retry", -1)
+
+        if ok1_retry == -1:  # 不启用该检查
             return response
         try:
             j_data = json.loads(response.text)
         except:
-            # 带my_count的请求正常返回的数据都是json格式，到这就是出了毛病被丢了个Html回来
-            request.meta["my_count"] += 1
-            # 登录失效，一般是程序中断一段时间后再运行，库里取出来的还是旧cookies，这里更新cookies再重试
-            if "passport" in response.url or "login" in response.url:
-                logging.warning(f"{request.url} cookies过期，使用文件中的cookies")
-                request.cookies = self.cookies
-                return request
-            elif response.status == 414:
-                logging.warning(f"{request.url} 请求频繁，爬取程序暂停5分钟")
-                print(datetime.now().strftime("%Y-%m-%d %H:%M"), f"{request.url} 请求频繁，爬取程序暂停5分钟")
-                self.crawler.engine.pause()
-                reactor.callLater(300, self.crawler.engine.unpause)
-                return request
-            else:
-                # 不知道发生啥了，查出问题再添
-                logging.error(f"{response.url}解析内容出错，当前文本 {response.text}")
-                print(f"{response.url}解析内容出错，当前文本 {response.text}")
-                return response
-
-        # 请求正常，无事发生
-        if j_data["ok"] == 1:
+            # 带ok1_retry的请求正常返回的数据都是json格式，到这就是出了毛病被丢了个Html回来
+            message = f"{response.url}解析内容出错，当前文本 {response.text}"
+            spider.logger.error(message)
+            print(message)
             return response
 
-        # 这里都只做sleep，之后看频繁的响应是什么，再写具体条件
-        elif my_count < 5:
-            # 失败次数不超过5，+1重试
-            request.meta["my_count"] += 1
-            message = "响应中data无效，{} ok={}已重新获取{}次".format(request.url, j_data["ok"],
-                                                                     request.meta["my_count"])
-            logging.info(message)
-            print(message)
-            time.sleep(1)
-            return request
-        elif my_count > 5 and my_count < 10:
-            request.meta["my_count"] += 1
-            logging.info("响应中data无效，{} 已重新获取{}次".format(request.url, request.meta["my_count"]))
-            print("响应中data无效，{} 已重新获取{}次".format(request.url, request.meta["my_count"]))
-            time.sleep(5)
-            return request
-        else:
-            if request.url == response.url:
-                message = "{}：ok不为1，meta:{}，".format(request.url, meta)
-            else:
-                message = "{}：ok不为1，重定向至{}，meta:{}".format(request.url, response.url, meta)
-            logging.error(message)
-            print(message)
-            raise IgnoreRequest  # 会去调用Request.errback
+        data_ok = j_data.get("ok", "无该字段")
 
-    def process_request(self, request, spider):
-        request.cookies = self.cookies
-        return None
+        if data_ok == 1:  # 请求正常，过
+            return response
+        else:  # 不行的都暂停一下重试
+            if ok1_retry < 6:
+                new_request = request.copy()
+                new_request.meta["ok1_retry"] += 1
+
+                message = f"[Ok1Retry]{request.url}响应中 ok={data_ok},已重新获取{request.meta['ok1_retry']}次"
+                spider.logger.info(message)
+                print(message)
+                d = defer.Deferred()
+                extra_delay = 5 if ok1_retry < 3 else 10
+                reactor.callLater(extra_delay, d.callback, new_request)
+                return d
+            else:
+                message = f"[Ok1Retry] 该链接ok校验失败超过最大重试次数，请求连接：{request.url}\n响应连接：{response.url}"
+                spider.logger.warning(message)
+                print(message)
+                return response
 
 
 class ScrapyWeibospiderSpiderMiddleware(object):
