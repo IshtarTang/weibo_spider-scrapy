@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import json
-from spider_tool import comm_tool
+from scrapy_weiboSpider.utils import config_utils
 import os
 
 FEED_EXPORT_ENCODING = "gbk"
@@ -30,7 +30,7 @@ SCHEDULER_PERSIST = True
 SCHEDULER_QUEUE_CLASS = 'scrapy_redis.queue.PriorityQueue'
 
 RETRY_TIMES = 4
-LOG_FILE = comm_tool.get_log_path()
+LOG_FILE = config_utils.get_log_path()
 
 RETRY_HTTP_CODES = [500, 502, 503, 504, 522, 524, 408, 429, 400]
 

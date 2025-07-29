@@ -1,18 +1,23 @@
 {
   "description": "新版用户主页爬取模式，默认配置文件，没有修改setting中的config_path 也没在指令传参就默认用这个",
   "id": 1,
-  "cookies_str": "",
-  "user_id": "",
-  "user_name": "",
-  "get_rwb_detail": 0,
+  "cookies_str": "UOR=,,cn.bing.com; SCF=Am8qkLrUcYwfwLiBKAPdVzBeNkWpM2AARkNAJQyCP_PQA3fALsa_qOyvhIxMEEMoWo5gdvNLI1-UJHFhyy-m0ao.; SINAGLOBAL=4418619534272.787.1746438471894; XSRF-TOKEN=WKPRJm6bn5-116jMMqkCRZuK; ALF=1755961281; SUB=_2A25FhjqRDeRhGeBL4lMX8ybFyTSIHXVm-jJZrDV8PUJbkNANLXnNkW1NRte-qWn6FkZDwNAsWBp8dDFbvmgtra-m; SUBP=0033WrSXqPxfM725Ws9jqgMF55529P9D9WFgpqB02S8a2UJmEK1y8vEg5JpX5KMhUgL.Foqf1K2ce0n4eon2dJLoI7fJUPxfMJHkqcvEMGSL; _s_tentry=weibo.com; Apache=3268572693248.829.1753375806458; ULV=1753375806461:221:7:1:3268572693248.829.1753375806458:1752617664742; WBPSESS=70AlSVZcFbZ5lizvBDd0tDFKRXbmy4RfksqaNBHBn_E9dIVJDMftn1umvYAQyR6sF6pn4Tm5TJ-Dua93XamQPnA-1Cy-s-wwN7WLq6W2DvkH2EHhRHCsI_r7_9Emx23G75UsofpsQuD0Pu97IZfJ-g==",
+  "user_id": "5992829552",
+  "user_name": "test",
+  "get_rwb_detail": 1,
   "time_limit": "",
   "get_comm_num": {
-    "wb_rcomm": -1,
-    "wb_ccomm": -1,
-    "rwb_rcomm": 0,
-    "rwb_ccomm": 0
+    "wb_rcomm": 12,
+    "wb_ccomm": 2,
+    "rwb_rcomm": 5,
+    "rwb_ccomm": 1
   },
-  "dir_path": "file",
+  "dir_path": "data",
   "print_level": 0,
-  "ensure_ask": 1
+  "ensure_ask": 1,
+  "debug": {
+    "on": 1,
+    "page_start": -1,
+    "page_limit": 2
+  }
 }

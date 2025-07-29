@@ -1,0 +1,106 @@
+# import json
+# from scrapy_weiboSpider.utils.log_print_utils import log_and_print
+# from scrapy_weiboSpider import fetcher, parsers
+# from scrapy import Request
+#
+# """
+# 这里都是scrapy.Request()的callbacks
+#
+# 为了避免我忘记，使用方法举例：
+# 在spider的init里self.parse_comm = callbacks.ParseCommsCallback(self.cookies,self.comm_headers)
+# 用的时候直接callback=self.parse_comms
+#
+# 但redis调度器不支持上面的用法，后面方法有一些更新，这里也不能直接用，但总之就留一份在这
+# """
+#
+#
+# class ParseCommsCallback:
+#
+#     def __init__(self, cookies, comm_headers):
+#         self.cookies = cookies
+#         self.comm_headers = comm_headers
+#
+#     def __call__(self, response):
+#         """
+#         root评论和child评论都走这个方法解析&翻页，用meta["comm_type"]区别
+#         meta中必须有以下值
+#         上级id superior_id、评论类型 comm_type 、用户id user_id、
+#         评论计数 comm_fetched、根评论目标数 rcomm_target，子评论目标数（这部分之后要改成可选项）
+#         :param response:
+#         :return:
+#         """
+#         content = response.text
+#         j_data = json.loads(content)
+#         meta = response.meta
+#
+#         superior_id = meta["superior_id"]  # 上级的id
+#         user_id = meta["user_id"]  # 用户id
+#         comm_type = meta["comm_type"]  # 评论类型
+#         ccomm_target = meta["ccomm_target"]
+#         rcomm_target = meta["rcomm_target"]
+#
+#         comms = j_data["data"]  # 获取到的评论数据，是个list，一条一个评论
+#         # 评论一条一条塞到解析方法里
+#         for comm in comms:
+#             # 提取item
+#             comm_item = parsers.extract_comm_item(comm, superior_id, comm_type)
+#             yield comm_item
+#             meta["comm_fetched"] += 1  # 确认送去解析再 +1
+#
+#             comment_id = comm_item["comment_id"]
+#             # 是否有子评论，有的且需要的话送去请求
+#             if comm.get("comments", []) and ccomm_target:
+#                 ccomm_url = "https://weibo.com/ajax/statuses/buildComments?is_reload=1&" \
+#                             "id={}&is_show_bulletin=2&is_mix=1&fetch_level=1&count=20&" \
+#                             "uid={}&max_id=0".format(comment_id, user_id)
+#
+#                 yield Request(ccomm_url, callback=self,
+#                               meta={"superior_id": comment_id, "user_id": user_id, "comm_type": "child",
+#                                     "rcomm_target": rcomm_target, "ccomm_target": ccomm_target,
+#                                     "comm_fetched": 0, "ok1_retry": 0},
+#                               headers=self.comm_headers, cookies=self.cookies, dont_filter=True)
+#         message = "获取到{} comm {} 条，上级为 {}，重试{}次". \
+#             format(comm_type, len(comms), superior_id, meta.get("failure_with_max_id", 0))
+#         log_and_print(message, "debug")
+#
+#         # 下一页评论
+#         comment_turning_gen = fetcher.build_comment_turning_request(
+#             response, self.cookies, self.comm_headers, self)
+#
+#         status = next(comment_turning_gen)
+#         if "ok" in status:  # 有且要继续翻页，会再反一个request回来
+#             comm_limit = status.split(":")[1]
+#             comment_turning_request = next(comment_turning_gen)
+#             yield comment_turning_request
+#             message = ""
+#         elif "wb limit" in status:  # 微博限制评论显示
+#             message = ""
+#         elif "no max_id" in status:  # 没有下一页
+#             message = ""
+#         elif "comm_limit" in status:  # 已获取设定的条数
+#             message = ""
+#
+#
+# def get_long_text(response):
+#     content = response.text
+#     j_data = json.loads(content)
+#     meta = response.meta
+#     meta["count"] += 1
+#     wb_item = meta["wb_item"]
+#
+#     if j_data["ok"] and j_data["data"]:
+#         # 确实是长微博
+#         if j_data["data"]:
+#             content = j_data["data"]["longTextContent"]
+#             wb_item["content"] = content
+#         yield wb_item
+#         message = "{} 解析完毕:{}".format(wb_item["wb_url"], content[:10].replace("\n", "\t"))
+#         log_and_print(message, "DEBUG")
+#
+#     elif j_data["ok"]:
+#         # 判断是否长微博是用长度判断的，可能出现误判，获取长文本未返回数据
+#         # 这种情况直接用之前的短文本就行
+#         yield wb_item
+#     else:
+#         log_and_print("{} 长文获取失败", "warn")
+#         yield wb_item

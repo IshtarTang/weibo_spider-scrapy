@@ -119,6 +119,36 @@ pipline生成结果文件一点优化
 拆分出中间件ResponseStatusHandlerMiddleware，目前只用于处理请求频繁414状态码
 MyCountDownloaderMiddleware改为Ok1RetryMiddleware，检查响应中的json数据中是否包含{"ok":1}
 
+2025.07.25
+优化parse_wb返回内容结构
+parse_wb_simple移动到parsers.py
+拆分出 fetcher.build_firse_comment_request
+
+2025.07.26
+get_comm合并到parse_comm
+从 parse_comm 拆分出 parsers.extract_comm_item
+从 parse_comm 拆分出 fetcher.build_comment_turning_request
+拆分start，各功能封装到 utils/init_utils
+把 comm_tool 和各处写的零碎工具函数整合到 utils 下的 config_utils、file_utils和time_utils
+
+2025.07.29
+不记得具体拆分过程了，总是就是拆了
+fetcher.py 构建请求
+parses.py 解析
+skip_rules.py 各种跳过的条件
+utils/ 小工具
+callbacks.py 想把一些能通用的回调函数拆出来，拆完发现redis的调度器不支持这么用
+callback_templates.py 上面那个的替代方案，里面的函数可以很方便的直接装到别的spider里
+
+
+
+有兴致的话要写的优化
+parse_wb的config参数拆掉，callback弄成可选
+评论翻页的failure_with_max_id弄成中间件，加开关
+build_firse_rcomment_request前面两个过滤条件拆到skip_rules
+时间很够的话把config弄成个类
+
+
 
 问题记录（微博的问题，不是我的）
 部分微博根评论无法完全获取，根评论在获取到一定数量后会开始有一个很迷的逻辑，会返回有max_id但没有data的数据，要继续用新的max_id请求到第15次才会返回有内容的（太离谱了我感觉我以后自己看到都不信所以截了图在留档里），而且继续往后翻一些之后data会一直为空

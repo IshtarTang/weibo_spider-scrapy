@@ -1,8 +1,21 @@
 import time
 import os
 import re
+
+from scrapy_weiboSpider.utils import time_utils
 import json
-from spider_tool import merge_wb
+
+"""
+与配置文件有关的工具
+
+"""
+
+
+def load_config(config_path):
+    with open(config_path, "r", encoding="utf-8") as op:
+        config_str = op.read()
+    config = json.loads(config_str)
+    return config
 
 
 def cookiestoDic(str1):
@@ -26,7 +39,7 @@ def cookiestoDic(str1):
 
 def get_log_path(key_word="", log_dir="log"):
     """
-    :param id:
+    该配置文件的日志路劲
     :return:
     """
     date1 = time.strftime("%m%d", time.localtime())
@@ -43,41 +56,6 @@ def get_log_path(key_word="", log_dir="log"):
             return log_path
         else:
             n += 1
-
-
-def t_is_a_early_than_b(a, b, can_equal):
-    """
-    时间比较
-    :param a: 毫秒时间戳(13位)或 "%Y-%m-%d %H:%M"格式的字符串
-    :param b: 毫秒时间戳(13位)或 "%Y-%m-%d %H:%M"格式的字符串
-    :param can_equal: 时间相等时返回True还是False
-    :return: int
-    """
-    patten = "%Y-%m-%d %H:%M"
-    if type(a) == str:
-        time_a = time.strptime(a, patten)
-        timestamp_a = time.mktime(time_a) * 1000
-    elif type(a) == int:
-        timestamp_a = a
-    else:
-        print("参数a应为int或str类型，返回0")
-        return 0
-
-    if type(b) == str:
-        time_b = time.strptime(b, patten)
-        timestamp_b = time.mktime(time_b) * 1000
-    elif type(b) == int:
-        timestamp_b = b
-    else:
-        print("参数a应为int或str类型,返回0")
-        return 0
-
-    result = timestamp_b - timestamp_a
-
-    if can_equal:
-        return result >= 0
-    else:
-        return result > 0
 
 
 def check_config(config):
@@ -122,7 +100,7 @@ def check_config(config):
                     except:
                         print("start_time/stop_time为str时，应该为%Y-%m-%d %H:%M格式")
                         return False
-            if (start_time and stop_time) and not t_is_a_early_than_b(start_time, stop_time, False):
+            if (start_time and stop_time) and not time_utils.is_a_early_than_b(start_time, stop_time, False):
                 print("时间范围设定错误（开始时间晚于结束时间）")
                 return False
     # 搜索模式参数检查
@@ -198,28 +176,14 @@ def get_key_word(config, user_Chinese_symbols=True):
 
 
 def get_result_filepath(config):
+    """
+    该配置的结果文件路劲
+    :param config:
+    :return:
+    """
     key_word = get_key_word(config)
     dir_path = config.get("dir_path", "file")
     if not os.path.exists(dir_path):
         os.makedirs(dir_path)
     path = os.path.join(dir_path, key_word)
     return path
-
-
-def get_last_wb_public_time(wb_result_file_path):
-    """
-    :param wb_result_file_path: wb_result.json路径
-    :return:文件里最晚一条微博
-    """
-    try:
-        wbs = json.load(open(wb_result_file_path, "r", encoding="utf-8"))
-        wbs_timestamp = [wb_info["public_timestamp"] for wb_info in wbs]
-        return max(wbs_timestamp)
-    except:
-        return 0
-
-
-if __name__ == '__main__':
-    config = json.load(open("../configs/test.json", "r", encoding="utf-8"))
-    x = get_log_path(get_key_word(config))
-    print(x)

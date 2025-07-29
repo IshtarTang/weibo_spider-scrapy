@@ -6,11 +6,9 @@
 # https://docs.scrapy.org/en/latest/topics/spider-middleware.html
 
 from scrapy import signals
-from scrapy.exceptions import IgnoreRequest
 import json
 import logging
-import time
-from spider_tool import comm_tool
+from scrapy_weiboSpider.utils import config_utils
 from datetime import datetime
 from twisted.internet import reactor, defer
 
@@ -52,7 +50,7 @@ class LoginStatusMiddleware:
     def __init__(self, config_path, crawler):
         self.crawler = crawler
         config = json.load(open(config_path, "r", encoding="utf-8"))
-        self.cookies = comm_tool.cookiestoDic(config["cookies_str"])
+        self.cookies = config_utils.cookiestoDic(config["cookies_str"])
 
     @classmethod
     def from_crawler(cls, crawler):

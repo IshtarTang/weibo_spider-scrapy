@@ -4,11 +4,11 @@
 # # See: https://docs.scrapy.org/en/latest/topics/item-pipeline.html
 
 from scrapy_weiboSpider.items import *
-from spider_tool.comm_tool import get_result_filepath
+from scrapy_weiboSpider.utils.config_utils import get_result_filepath
 import json
 import os
 import logging
-from spider_tool import merge_wb
+from scrapy_weiboSpider.utils import merge_wb
 
 
 def log_and_print(text):
@@ -81,10 +81,7 @@ class ScrapyWeibospiderPipeline(object):
             return "wb {} 到暂存文件".format(item["wb_url"].split("?")[0])
 
         elif isinstance(item, commentItem):
-            if item["comment_type"] == "root":
-                item["superior_id"] = item["superior_id"].split("/")[2]
             comm_dict = dict(item)
-
             if item["comment_type"] == "root":
                 self.rcomm_file.write(json.dumps(comm_dict, ensure_ascii=False) + "\n")
                 return "r comm {} id[{}] superior_id[{}]".format(
