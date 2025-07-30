@@ -132,7 +132,7 @@ get_comm合并到parse_comm
 把 comm_tool 和各处写的零碎工具函数整合到 utils 下的 config_utils、file_utils和time_utils
 
 2025.07.29
-不记得具体拆分过程了，总是就是拆了
+不记得具体拆分过程了，总之就是拆了
 fetcher.py 构建请求
 parses.py 解析
 skip_rules.py 各种跳过的条件
@@ -140,10 +140,13 @@ utils/ 小工具
 callbacks.py 想把一些能通用的回调函数拆出来，拆完发现redis的调度器不支持这么用
 callback_templates.py 上面那个的替代方案，里面的函数可以很方便的直接装到别的spider里
 
+2025.07.30
+parsers.parse_wb参数优化
+failure_with_max_id改为只判断root评论
 
+parsers.parse_wb参数优化，failure_with_max_id改为只判断root评论
 
 有兴致的话要写的优化
-parse_wb的config参数拆掉，callback弄成可选
 评论翻页的failure_with_max_id弄成中间件，加开关
 build_firse_rcomment_request前面两个过滤条件拆到skip_rules
 时间很够的话把config弄成个类

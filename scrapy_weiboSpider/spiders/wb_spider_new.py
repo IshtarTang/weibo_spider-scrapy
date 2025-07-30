@@ -47,6 +47,14 @@ class WeiboSpiderSpider(scrapy.Spider):
         super().__init__(*args, **kwargs)
         self.config = config_utils.load_config(settings["CONFIG_PATH"])
         self.user_id = self.config["user_id"]
+        # 目标和非目标评论数配置
+        self.target_comm_config = {"wb_rcomm": self.config["get_comm_num"]["wb_rcomm"],
+                                   "wb_ccomm": self.config["get_comm_num"]["wb_ccomm"]}
+
+        self.no_target_comm_config = {"target_user_id": self.config["user_id"],
+                                      "wb_rcomm": self.config["get_comm_num"]["rwb_rcomm"],
+                                      "wb_ccomm": self.config["get_comm_num"]["rwb_ccomm"]}
+
         self.wb_time_start_limit = 0
         self.saved_all_bid = set()
         self.extra_log_path = f"log{os.path.sep}extra"
@@ -158,10 +166,11 @@ class WeiboSpiderSpider(scrapy.Spider):
                     continue
 
                 # 送去解析
+
                 ele_generator = parsers.parse_wb(
-                    wb_info, self.config,
+                    wb_info, self.config["get_rwb_detail"], self.target_comm_config, self.no_target_comm_config,
                     self.cookies, self.blog_headers, self.comm_headers,
-                    self.parse_comms, self.get_single_wb, self.get_long_text)
+                    self.get_long_text, self.get_single_wb, self.parse_comms)
                 status = next(ele_generator)  # 第一个返回是状态码
                 if status == "ok":  # 正常解析，后续会传item和request回来
                     for ele in ele_generator:
@@ -238,16 +247,20 @@ class WeiboSpiderSpider(scrapy.Spider):
             yield comment_turning_request
         elif status == "wb limit":  # 微博限制评论显示
             message = f"{superior_id} 下 {comm_type} 状态： {message}，结束获取该条微博评论"
-            log_and_print(message, "info")
+            log_and_print(message, "debug")
         elif status == "no max_id":  # 没有下一页
             message = f"{blog_user_id}/{superior_id} 无更多评论，获取结束"
-            log_and_print(message, "info")
+            log_and_print(message, "debug")
         elif status == "comm_limit":  # 已获取设定的条数
             message = f"{comm_type} {blog_user_id}/{superior_id} 已经获取足够评论条数{message} "
-            log_and_print(message, "info")
-            message = ""
+            log_and_print(message, "debug")
 
     def get_long_text(self, response):
+        """
+        这里是只用来获取长微博文本的
+        :param response: meta必须带一个已经提取出来的wb_item
+        :return:
+        """
         content = response.text
         j_data = json.loads(content)
         meta = response.meta
@@ -298,10 +311,9 @@ class WeiboSpiderSpider(scrapy.Spider):
             return
 
         ele_generator = parsers.parse_wb(
-            wb_info, self.config,
+            wb_info, self.config["get_rwb_detail"], self.target_comm_config, self.no_target_comm_config,
             self.cookies, self.blog_headers, self.comm_headers,
-            self.parse_comms, self.get_single_wb, self.get_long_text
-        )
+            self.get_long_text, self.get_single_wb, self.parse_comms)
         status = next(ele_generator)  # 第一个返回是状态码
 
         if status == "ok":  # ok的后续会传item和request回来

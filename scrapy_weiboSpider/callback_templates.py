@@ -37,7 +37,7 @@
 #             comment_id = comm_item["comment_id"]
 #             # 是否有子评论，有的且需要的话送去请求
 #             if comm.get("comments", []) and ccomm_target:
-#                 return fetcher.build_firse_ccomment_request(
+#                 yield fetcher.build_firse_ccomment_request(
 #                     comment_id, blog_user_id, rcomm_target, ccomm_target,
 #                     self.parse_comms, self.comm_headers, self.cookies)
 #
@@ -49,17 +49,20 @@
 #         comment_turning_gen = fetcher.build_comment_turning_request(
 #             response, self.cookies, self.comm_headers, self.parse_comms)
 #
-#         status = next(comment_turning_gen)
-#         if "ok" in status:  # 有且要继续翻页，会再反一个request回来
-#             comm_limit = status.split(":")[1]
+#         status, message = next(comment_turning_gen)
+#
+#         if status == "ok":  # 有且要继续翻页，会再反一个request回来
 #             comment_turning_request = next(comment_turning_gen)
 #             yield comment_turning_request
-#             message = ""
-#         elif "wb limit" in status:  # 微博限制评论显示
-#             message = ""
-#         elif "no max_id" in status:  # 没有下一页
-#             message = ""
-#         elif "comm_limit" in status:  # 已获取设定的条数
+#         elif status == "wb limit":  # 微博限制评论显示
+#             message = f"{superior_id} 下 {comm_type} 状态： {message}，结束获取该条微博评论"
+#             log_and_print(message, "info")
+#         elif status == "no max_id":  # 没有下一页
+#             message = f"{blog_user_id}/{superior_id} 无更多评论，获取结束"
+#             log_and_print(message, "info")
+#         elif status == "comm_limit":  # 已获取设定的条数
+#             message = f"{comm_type} {blog_user_id}/{superior_id} 已经获取足够评论条数{message} "
+#             log_and_print(message, "info")
 #             message = ""
 #
 #     def get_long_text(self, response):

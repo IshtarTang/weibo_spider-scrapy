@@ -7,29 +7,27 @@ from scrapy_weiboSpider import fetcher
 from scrapy_weiboSpider.utils.log_print_utils import log_and_print
 
 
-def parse_wb(wb_data: dict,
-             config, cookies, blog_headers, comm_headers,
-             parse_comms_callback, get_single_wb_callback, get_long_text_callback
+def parse_wb(wb_data: dict, get_rwb_detail,
+             comm_config: dict = None, no_target_comm_config: dict = None,
+             cookies: dict = None, blog_headers: dict = None, comm_headers: dict = None,
+             get_long_text_callback=None, get_single_wb_callback=None, parse_comms_callback=None,
              ):
     """
     微博内容完全解析
     制作weibo信息item，根据配置构建评论、源微博请求
 
-    刚从spider那边拆过来，还有一些要修的，有兴致再说
-    callback那一堆应该可以弄成可以选，可能会有一些只需要 item的场景
-    对conifg的依赖感觉也可以修一下，默认只传当前微博要的评论数，源微博的获取评论数弄成可选变量
-
-
-    :param wb_data: 任何一种响应里微博信息部分
-    :param config: 配置文件
+    :param wb_data:任何一种响应里微博信息部分
+    :param get_rwb_detail:当该条微博是转发时，是否获取源微博，要获取的话必须指定get_single_wb_callback
+    :param comm_config: 要获取多少评论，格式{wb_rcomm:int,wb_ccomm:int}
+    :param no_target_comm_config:指定目标用户，及当前用户不是目标用户时要获取多少评论，格式{"target_user_id": str,"wb_rcomm": int,"wb_ccomm": int}
     :param cookies:
-    :param blog_headers: 博客接口请求头
-    :param comm_headers: 评论接口请求头
-    :param parse_comms_callback:
-    :param get_single_wb_callback:
-    :return:第一个yield状态（跳过这条/获取失败/获取成功），获取成功的话后面继续yield item或request，其它状态则没有后续yield
+    :param blog_headers: 获取博文用的请求头，long_text和single_wb都用这个
+    :param comm_headers: 获取评论用的请求头
+    :param get_long_text_callback: 不指定会获取不到超过字140微博的完整博文
+    :param get_single_wb_callback: 不指定会获取不到源微博
+    :param parse_comms_callback:不指定获取不到评论
+    :return:
     """
-    get_rwb_detail = config["get_rwb_detail"]
 
     wb_item = extract_wb_item(wb_data)
     if not wb_item:
@@ -40,26 +38,29 @@ def parse_wb(wb_data: dict,
     # 没有什么异常，返回ok状态码
     yield "ok"
 
-    user_id = wb_item["user_id"]
-    comm_config = config["get_comm_num"]
-    if user_id == config["user_id"]:
-        rcomm_target = comm_config["wb_rcomm"]
-        ccomm_target = comm_config["wb_ccomm"]
-    else:
-        rcomm_target = comm_config["rwb_rcomm"]
-        ccomm_target = comm_config["rwb_ccomm"]
-
     # 获取评论
-    first_comm_request = fetcher.build_firse_rcomment_request(
-        wb_data, rcomm_target, ccomm_target,
-        parse_comms_callback, cookies, headers=comm_headers)
-    if first_comm_request:
-        yield first_comm_request
+    if comm_config and parse_comms_callback is not None:
+        user_id = wb_item["user_id"]
+        target_user_id = "" if not no_target_comm_config else no_target_comm_config.get("target_user_id", "")
+        # 未指定target_user_id或者当前user是目标用户
+        if not target_user_id or user_id == target_user_id:
+            rcomm_target = comm_config["wb_rcomm"]
+            ccomm_target = comm_config["wb_ccomm"]
+        else:
+            rcomm_target = no_target_comm_config["wb_rcomm"]
+        ccomm_target = no_target_comm_config["wb_ccomm"]
+
+        # 获取评论
+        first_comm_request = fetcher.build_firse_rcomment_request(
+            wb_data, rcomm_target, ccomm_target,
+            parse_comms_callback, cookies, headers=comm_headers)
+        if first_comm_request:
+            yield first_comm_request
 
     # 做字数判断，过长的要单独一个请求获取完整内容
     text_len = wb_data.get("textLength", 0)
     # 字数超过的送到获取长文的地方去，原content会被覆盖
-    if text_len >= 240:
+    if text_len >= 240 and get_long_text_callback is not None:
         yield fetcher.build_long_text_request(wb_item, get_long_text_callback, cookies=cookies,
                                               blog_headers=blog_headers)
     else:
@@ -69,7 +70,7 @@ def parse_wb(wb_data: dict,
 
     # 处理源微博
     r_href = wb_item["r_href"]
-    if r_href:
+    if r_href and get_single_wb_callback is not None:
         r_wb_url = "https://weibo.com" + r_href
         if get_rwb_detail:  # 获取源微博详情
             print("{}的源微博为 {}，准备进行详细解析".format(wb_item["wb_url"], r_wb_url))
